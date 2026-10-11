@@ -528,6 +528,40 @@ await group('20. iOS 安装引导', async () => {
   await send('Emulation.setUserAgentOverride', { userAgent: '', platform: '' });
 });
 
+/* ---------- 21. 金额支持小数 ---------- */
+await group('21. 每月可用金额支持小数', async () => {
+  await evaluate('window.__t.click("#tabbar .tab[data-view=\'settings\']"); true');
+  await evaluate('window.__t.type("#setBudget", "3000.50"); true');
+  ok('3000.50 原样保存', await evaluate('state.settings.budget') === 3000.5,
+    String(await evaluate('state.settings.budget')));
+  ok('还剩显示 ¥3,000.50', await waitText('#bcLeft', '¥3,000.50') === true,
+    await evaluate('window.__t.txt("#bcLeft")'));
+  ok('输入框回显 3000.5', await evaluate('window.__t.q("#setBudget").value') === '3000.5');
+
+  await evaluate('window.__t.type("#setBudget", "12.345"); true');
+  ok('超过两位小数只保留到分（12.345 → 12.34）', await evaluate('state.settings.budget') === 12.34,
+    String(await evaluate('state.settings.budget')));
+
+  await evaluate('window.__t.type("#setBudget", "3.4.5"); true');
+  ok('多个小数点当作 3.45', await evaluate('state.settings.budget') === 3.45,
+    String(await evaluate('state.settings.budget')));
+
+  await evaluate('window.__t.type("#setBudget", "0.01"); true');
+  ok('可以设到一分钱', await evaluate('state.settings.budget') === 0.01,
+    String(await evaluate('state.settings.budget')));
+  ok('还剩显示 ¥0.01', await waitText('#bcLeft', '¥0.01') === true,
+    await evaluate('window.__t.txt("#bcLeft")'));
+
+  await evaluate('window.__t.type("#setBudget", "abc"); true');
+  ok('乱填会退回未设置', await evaluate('state.settings.budget') === 0);
+  ok('未设置时还剩显示 —', await evaluate('window.__t.txt("#bcLeft")') === '—');
+
+  await evaluate('window.__t.type("#setBudget", "888.88"); true');
+  await reload();
+  ok('小数金额刷新后仍在', await evaluate('state.settings.budget') === 888.88,
+    String(await evaluate('state.settings.budget')));
+});
+
 console.log('\n' + results.join('\n'));
 const total = results.length;
 console.log('\n' + (failed === 0 ? '全部通过' : failed + ' 项失败') + '：' + (total - failed) + '/' + total);

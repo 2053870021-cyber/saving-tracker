@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -58,6 +58,18 @@ function displayAmount(s) {
 function parseAmountInput(s) {
   const v = parseFloat(s);
   return isFinite(v) && v > 0 ? Math.min(Math.round(v * 100) / 100, MAX_AMOUNT) : 0;
+}
+
+/** 解析用户填的金额：只留数字和一个小数点，最多两位小数（支持到分） */
+function parseMoneyInput(str) {
+  let s = String(str == null ? '' : str).replace(/[^\d.]/g, '');
+  const dot = s.indexOf('.');
+  if (dot >= 0) {
+    s = s.slice(0, dot + 1) + s.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+  }
+  const v = Number(s);
+  if (!isFinite(v) || v <= 0) return 0;
+  return Math.min(Math.round(v * 100) / 100, MAX_AMOUNT);
 }
 
 /* ---------------- 预算周期 ---------------- */
@@ -117,7 +129,7 @@ function normalizeState(raw) {
   const s = defaultState();
   if (!raw || typeof raw !== 'object') return s;
   const rs = raw.settings || {};
-  s.settings.budget = Math.max(0, Math.round(Number(rs.budget) || 0));
+  s.settings.budget = Math.min(MAX_AMOUNT, Math.max(0, Math.round((Number(rs.budget) || 0) * 100) / 100));
   s.settings.cycleStartDay = CYCLE_DAYS.indexOf(Number(rs.cycleStartDay)) >= 0 ? Number(rs.cycleStartDay) : 1;
   s.settings.warnRatio = [0.7, 0.8, 0.9].indexOf(Number(rs.warnRatio)) >= 0 ? Number(rs.warnRatio) : 0.8;
   s.settings.lastBackupAt = rs.lastBackupAt || null;
@@ -901,8 +913,8 @@ function bind() {
 
   /* 设置项 */
   $('#setBudget').onchange = () => {
-    const v = Math.round(Number(String($('#setBudget').value).replace(/[^\d.]/g, '')) || 0);
-    state.settings.budget = Math.max(0, Math.min(v, MAX_AMOUNT));
+    const v = parseMoneyInput($('#setBudget').value);
+    state.settings.budget = v;
     save();
     renderBudget();
     renderSettings();
