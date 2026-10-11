@@ -52,14 +52,14 @@
 
     <div class="card budget-card" id="budgetCard">
       <div class="bc-top">
-        <span class="bc-label" id="bcPeriod">本月已花</span>
+        <span class="bc-label" id="bcPeriod">本月还剩</span>
         <span id="bcPill" class="pill hidden"></span>
       </div>
-      <div id="bcSpent" class="bc-spent">¥0.00</div>
+      <div id="bcLeft" class="bc-hero">¥0.00</div>
       <div class="progress"><div id="bcBar" class="progress-fill"></div></div>
       <div class="bc-grid">
-        <div><div class="k">剩余</div><div id="bcLeft" class="v">—</div></div>
-        <div><div class="k">日均可用</div><div id="bcDaily" class="v">—</div></div>
+        <div><div class="k">已花</div><div id="bcSpent" class="v">¥0.00</div></div>
+        <div><div class="k">每天可花</div><div id="bcDaily" class="v">—</div></div>
         <div><div class="k">剩余天数</div><div id="bcDays" class="v">—</div></div>
       </div>
       <div id="bcHint" class="bc-hint hidden"></div>
@@ -100,12 +100,13 @@
 
     <div class="card">
       <div class="row">
-        <label for="setBudget">月预算</label>
+        <label for="setBudget">每月可用金额</label>
         <div class="row-val">
           <span class="cny-sm">¥</span>
           <input id="setBudget" type="text" inputmode="decimal" placeholder="未设置" autocomplete="off" />
         </div>
       </div>
+      <p class="hint">填你每个月打算花多少。之后每记一笔，首页的「还剩」就自动减掉这笔钱。</p>
       <div class="row">
         <label>预警阈值</label>
         <div class="seg" id="setWarn">

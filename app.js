@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -267,10 +267,29 @@ function renderBudget() {
   const left = Math.round((budget - spent) * 100) / 100;
   const level = budget <= 0 ? 'none' : (ratio >= 1 ? 'over' : (ratio >= state.settings.warnRatio ? 'warn' : 'ok'));
 
-  $('#bcPeriod').textContent = cy.label + '已花';
+  $('#bcPeriod').textContent = state.settings.cycleStartDay === 1
+    ? '本月还剩'
+    : '本期还剩 · ' + cy.label;
+
+  /* 主角：还剩多少钱（记账时数字滚动减少） */
+  const heroEl = $('#bcLeft');
+  heroEl.className = 'bc-hero ' + (level === 'none' ? '' : level);
+  if (budget <= 0) {
+    heroEl.textContent = '—';
+    lastLeftShown = null;
+  } else {
+    if (lastLeftShown === null || lastLeftShown === left) {
+      heroEl.textContent = money(left);
+    } else {
+      animateMoney(heroEl, lastLeftShown, left);
+    }
+    lastLeftShown = left;
+  }
+
+  /* 三格明细 */
   const spentEl = $('#bcSpent');
   spentEl.textContent = money(spent);
-  spentEl.className = 'bc-spent ' + (level === 'none' ? 'ok' : level);
+  spentEl.className = 'v';
 
   const fill = $('#bcBar');
   fill.style.width = (budget > 0 ? Math.min(ratio, 1) * 100 : 0) + '%';
@@ -287,26 +306,19 @@ function renderBudget() {
     pill.classList.add('hidden');
   }
 
-  const leftEl = $('#bcLeft');
   const dailyEl = $('#bcDaily');
   const daysEl = $('#bcDays');
   daysEl.textContent = cy.daysLeft + ' 天';
   daysEl.className = 'v';
 
   if (budget <= 0) {
-    leftEl.textContent = '—';
-    leftEl.className = 'v';
     dailyEl.textContent = '—';
     dailyEl.className = 'v';
   } else if (left < 0) {
-    leftEl.textContent = money(left);
-    leftEl.className = 'v over';
     dailyEl.textContent = '已超支';
     dailyEl.className = 'v over';
   } else {
     const daily = Math.round((left / cy.daysLeft) * 100) / 100;
-    leftEl.textContent = money(left);
-    leftEl.className = 'v ' + (level === 'warn' ? 'warn' : 'ok');
     dailyEl.textContent = money(daily);
     const todaySpent = state.expenses
       .filter(e => e.date === todayStr())
@@ -318,10 +330,12 @@ function renderBudget() {
   const banner = $('#warnBanner');
   if (level === 'over') {
     banner.className = 'banner over';
-    banner.textContent = '⚠️ 已超支 ' + money(Math.abs(left)) + '，本周期还剩 ' + cy.daysLeft + ' 天，建议暂停非必要支出。';
+    banner.textContent = '⚠️ 钱花完了，还超了 ' + money(Math.abs(left)) + '。本周期还有 ' +
+      cy.daysLeft + ' 天，建议先停掉非必要支出。';
   } else if (level === 'warn') {
     banner.className = 'banner warn';
-    banner.textContent = '注意：预算已用 ' + Math.round(ratio * 100) + '%，只剩 ' + money(left) + '、' + cy.daysLeft + ' 天，悠着点花。';
+    banner.textContent = '注意：只剩 ' + money(left) + ' 了（已用 ' + Math.round(ratio * 100) +
+      '%），还有 ' + cy.daysLeft + ' 天，悠着点花。';
   } else {
     banner.className = 'banner hidden';
     banner.textContent = '';
@@ -334,7 +348,7 @@ function renderBudget() {
     : null;
   if (budget <= 0) {
     hint.className = 'bc-hint';
-    hint.innerHTML = '还没设置月预算，先设一个数，我才能帮你盯住花销。' +
+    hint.innerHTML = '还没设置每月可用金额。先填个数，之后每记一笔就自动从里面减掉。' +
       '<button id="hintGoSet">去设置</button>';
     $('#hintGoSet').onclick = () => setTab('settings');
   } else if (state.expenses.length > 0 && (staleDays === null || staleDays >= BACKUP_STALE_DAYS)) {
@@ -347,9 +361,30 @@ function renderBudget() {
       .filter(e => e.date === todayStr())
       .reduce((s, e) => s + e.amount, 0) * 100) / 100;
     hint.className = 'bc-hint';
-    hint.textContent = '今天已花 ' + money(todaySpent) + '，本周期日均可用 ' +
-      (left > 0 ? money(left / cy.daysLeft) : '已超支') + '。';
+    hint.textContent = '本月可用 ' + money(budget) + ' · 今天已花 ' + money(todaySpent) +
+      ' · 还剩 ' + cy.daysLeft + ' 天';
   }
+}
+
+/** 数字滚动动画：让「还剩多少」在记账时肉眼可见地减少 */
+let lastLeftShown = null;
+
+function animateMoney(el, from, to) {
+  if (el.__raf) cancelAnimationFrame(el.__raf);
+  const t0 = performance.now();
+  const dur = 420;
+  const step = t => {
+    const p = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    el.textContent = money(from + (to - from) * eased);
+    if (p < 1) {
+      el.__raf = requestAnimationFrame(step);
+    } else {
+      el.__raf = null;
+      el.textContent = money(to);
+    }
+  };
+  el.__raf = requestAnimationFrame(step);
 }
 
 function renderChips() {
@@ -417,12 +452,12 @@ function addExpense() {
   toast('已记 ' + money(amount) + ' · ' + cat.name);
 
   if (after.level === 'over' && before.level !== 'over') {
-    alertModal('超支提醒', '本周期已花 <b>' + money(after.spent) + '</b>，超出预算 <b>' +
-      money(after.spent - after.budget) + '</b>。<br>还剩 ' + after.daysLeft +
+    alertModal('钱花完了', '每月可用的 <b>' + money(after.budget) + '</b> 已经花光，还超出 <b>' +
+      money(after.spent - after.budget) + '</b>。<br>本周期还有 ' + after.daysLeft +
       ' 天，建议先停掉非必要支出。', '知道了');
   } else if (after.level === 'warn' && before.level === 'ok') {
-    alertModal('预算预警', '本周期已用 <b>' + Math.round(after.ratio * 100) + '%</b>，只剩 <b>' +
-      money(after.budget - after.spent) + '</b> / ' + after.daysLeft + ' 天。', '我会注意');
+    alertModal('余额预警', '只剩 <b>' + money(after.budget - after.spent) + '</b> 了（已用 <b>' +
+      Math.round(after.ratio * 100) + '%</b>），本周期还有 ' + after.daysLeft + ' 天。', '我会注意');
   }
 }
 
@@ -871,7 +906,9 @@ function bind() {
     save();
     renderBudget();
     renderSettings();
-    toast(state.settings.budget > 0 ? '月预算已设为 ' + money(state.settings.budget) : '已取消月预算');
+    toast(state.settings.budget > 0
+      ? '每月可用金额已设为 ' + money(state.settings.budget)
+      : '已取消每月可用金额');
   };
   $('#setWarn').addEventListener('click', ev => {
     const b = ev.target.closest('button');

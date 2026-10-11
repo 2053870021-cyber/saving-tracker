@@ -78,6 +78,19 @@ function parseMoney(text) {
   return Number(String(text).replace(/[^\d.-]/g, ''));
 }
 
+/** 等某个元素的文字变成期望值（首页「还剩」是滚动动画） */
+async function waitText(sel, expected, timeout) {
+  const limit = timeout || 2000;
+  const t0 = Date.now();
+  let last = null;
+  while (Date.now() - t0 < limit) {
+    last = await evaluate('window.__t.txt("' + sel + '")');
+    if (last === expected) return true;
+    await sleep(60);
+  }
+  return last;
+}
+
 /* ---------------- 主流程 ---------------- */
 const target = await pickTarget();
 const cdp = await connect(target.webSocketDebuggerUrl);
@@ -152,8 +165,9 @@ await group('1. 初始状态', async () => {
   ok('第一个分类是餐饮', (await evaluate('window.__t.txt("#catChips .chip")')).indexOf('餐饮') >= 0);
   ok('金额显示为 0', await evaluate('window.__t.txt("#amountText")') === '0');
   ok('保存按钮置灰', await evaluate('window.__t.q("#saveBtn").disabled') === true);
-  ok('本月已花 ¥0.00', await evaluate('window.__t.txt("#bcSpent")') === '¥0.00');
-  ok('提示去设置预算', (await evaluate('window.__t.txt("#bcHint")')).indexOf('还没设置月预算') >= 0);
+  ok('已花 ¥0.00', await evaluate('window.__t.txt("#bcSpent")') === '¥0.00');
+  ok('未设可用金额时「还剩」显示 —', await evaluate('window.__t.txt("#bcLeft")') === '—');
+  ok('提示去设置可用金额', (await evaluate('window.__t.txt("#bcHint")')).indexOf('还没设置每月可用金额') >= 0);
   ok('记录页显示空态', (await evaluate('window.__t.txt("#logList")')).indexOf('本月还没有记录') >= 0);
 });
 
@@ -201,6 +215,9 @@ function todayStr() {
 await group('4. 设置月预算', async () => {
   await evaluate('window.__t.type("#setBudget", "100"); true');
   ok('预算写入 100', await evaluate('state.settings.budget') === 100);
+  ok('首页大字变成「还剩」', await waitText('#bcLeft', '¥87.50') === true,
+    await evaluate('window.__t.txt("#bcLeft")'));
+  ok('标签写明本月还剩', (await evaluate('window.__t.txt("#bcPeriod")')).indexOf('本月还剩') >= 0);
   const spent = parseMoney(await evaluate('window.__t.txt("#bcSpent")'));
   const left = parseMoney(await evaluate('window.__t.txt("#bcLeft")'));
   ok('已花 + 剩余 = 预算', Math.abs(spent + left - 100) < 0.001, spent + ' + ' + left);
@@ -219,9 +236,11 @@ await group('5. 80% 预警', async () => {
   await evaluate('window.__t.key("7"); window.__t.key("0"); window.__t.click("#saveBtn"); true');
   await sleep(120);
   ok('已花 ¥82.50', await evaluate('window.__t.txt("#bcSpent")') === '¥82.50');
+  ok('记一笔后「还剩」自动减到 ¥17.50', await waitText('#bcLeft', '¥17.50') === true,
+    await evaluate('window.__t.txt("#bcLeft")'));
   ok('横幅为预警样式', await evaluate('window.__t.q("#warnBanner").className') === 'banner warn');
   ok('横幅文案含「注意」', (await evaluate('window.__t.txt("#warnBanner")')).indexOf('注意') >= 0);
-  ok('弹出预警弹层', (await evaluate('window.__t.txt("#modalBody h2")')).indexOf('预算预警') >= 0);
+  ok('弹出余额预警弹层', (await evaluate('window.__t.txt("#modalBody h2")')).indexOf('余额预警') >= 0);
   ok('弹层文案含 83%', (await evaluate('window.__t.txt("#modalBody")')).indexOf('83%') >= 0);
   await evaluate('window.__t.click("#mOk"); true');
   ok('弹层已关闭', await evaluate('window.__t.shown("#modal")') === false);
@@ -232,12 +251,13 @@ await group('6. 超支告警', async () => {
   await evaluate('window.__t.key("2"); window.__t.key("0"); window.__t.click("#saveBtn"); true');
   await sleep(120);
   ok('已花 ¥102.50', await evaluate('window.__t.txt("#bcSpent")') === '¥102.50');
-  ok('已花数字变红', (await evaluate('window.__t.cls("#bcSpent")')).indexOf('over') >= 0);
-  ok('剩余显示 -¥2.50', await evaluate('window.__t.txt("#bcLeft")') === '-¥2.50');
-  ok('日均显示已超支', await evaluate('window.__t.txt("#bcDaily")') === '已超支');
+  ok('「还剩」数字变红', (await evaluate('window.__t.cls("#bcLeft")')).indexOf('over') >= 0);
+  ok('「还剩」显示 -¥2.50', await waitText('#bcLeft', '-¥2.50') === true,
+    await evaluate('window.__t.txt("#bcLeft")'));
+  ok('每天可花显示已超支', await evaluate('window.__t.txt("#bcDaily")') === '已超支');
   ok('横幅为超支样式', await evaluate('window.__t.q("#warnBanner").className') === 'banner over');
-  ok('横幅含超支金额', (await evaluate('window.__t.txt("#warnBanner")')).indexOf('已超支 ¥2.50') >= 0);
-  ok('弹出超支弹层', (await evaluate('window.__t.txt("#modalBody h2")')).indexOf('超支提醒') >= 0);
+  ok('横幅含超支金额', (await evaluate('window.__t.txt("#warnBanner")')).indexOf('还超了 ¥2.50') >= 0);
+  ok('弹出钱花完了弹层', (await evaluate('window.__t.txt("#modalBody h2")')).indexOf('钱花完了') >= 0);
   await evaluate('window.__t.click("#mOk"); true');
   ok('进度条变红', (await evaluate('window.__t.cls("#bcBar")')).indexOf('over') >= 0);
   ok('进度条封顶 100%', parseFloat(await evaluate('window.__t.q("#bcBar").style.width')) === 100);

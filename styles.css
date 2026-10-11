@@ -123,10 +123,13 @@ main {
 .budget-card { padding: 16px 16px 12px; }
 .bc-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .bc-label { font-size: 13px; color: var(--text-2); }
-.bc-spent { font-size: 34px; font-weight: 700; letter-spacing: -.5px; margin: 4px 0 12px; font-variant-numeric: tabular-nums; }
-.bc-spent.ok { color: var(--text); }
-.bc-spent.warn { color: var(--orange); }
-.bc-spent.over { color: var(--red); }
+.bc-hero {
+  font-size: 42px; font-weight: 700; letter-spacing: -1px;
+  margin: 6px 0 14px; font-variant-numeric: tabular-nums;
+}
+.bc-hero.ok { color: var(--text); }
+.bc-hero.warn { color: var(--orange); }
+.bc-hero.over { color: var(--red); }
 
 .pill { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
 .pill.ok { background: rgba(52, 199, 89, .16); color: var(--green-deep); }
