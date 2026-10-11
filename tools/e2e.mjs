@@ -562,6 +562,57 @@ await group('21. 每月可用金额支持小数', async () => {
     String(await evaluate('state.settings.budget')));
 });
 
+/** 独立算一遍：含今天的那一期从哪天开始 */
+function expectedCycleStart(day) {
+  const t = new Date();
+  const y = t.getFullYear();
+  const m = t.getMonth();
+  const dim = (yy, mm) => new Date(yy, mm + 1, 0).getDate();
+  const thisDay = Math.min(day, dim(y, m));
+  let s;
+  if (t.getDate() >= thisDay) {
+    s = new Date(y, m, thisDay);
+  } else {
+    const py = m === 0 ? y - 1 : y;
+    const pm = m === 0 ? 11 : m - 1;
+    s = new Date(py, pm, Math.min(day, dim(py, pm)));
+  }
+  const p2 = n => String(n).padStart(2, '0');
+  return s.getFullYear() + '-' + p2(s.getMonth() + 1) + '-' + p2(s.getDate());
+}
+
+/* ---------- 22. 周期起始日支持任意日期 ---------- */
+await group('22. 预算周期起始日支持任意一天', async () => {
+  await evaluate('window.__t.click("#tabbar .tab[data-view=\'settings\']"); true');
+  const optCount = await evaluate('document.querySelectorAll("#setCycle option").length');
+  ok('可选 1–31 任意一天', optCount === 31, String(optCount));
+  for (const d of [2, 8, 12, 18, 30, 31]) {
+    ok('包含 ' + d + ' 号', await evaluate('!!document.querySelector("#setCycle option[value=\'' + d + '\']")') === true);
+  }
+
+  await evaluate('window.__t.type("#setCycle", "12"); true');
+  ok('起始日写入 12', await evaluate('state.settings.cycleStartDay') === 12);
+  const hint12 = await evaluate('window.__t.txt("#cycleHint")');
+  ok('周期按 12 号计算', hint12.indexOf(expectedCycleStart(12)) >= 0, hint12);
+
+  await evaluate('window.__t.type("#setCycle", "31"); true');
+  const info = JSON.parse(await evaluate('JSON.stringify(currentCycle())'));
+  const sy = Number(info.startKey.slice(0, 4));
+  const sm = Number(info.startKey.slice(5, 7));
+  const sd = Number(info.startKey.slice(8, 10));
+  ok('没有 31 号的月份用当月最后一天（' + info.startKey + '）',
+    sd === Math.min(31, new Date(sy, sm, 0).getDate()), info.startKey);
+  const len = Math.round((new Date(info.endKey) - new Date(info.startKey)) / 86400000);
+  ok('周期长度在 28–31 天之间', len >= 28 && len <= 31, String(len));
+  ok('剩余天数合理', info.daysLeft >= 1 && info.daysLeft <= 31, String(info.daysLeft));
+  ok('首页标签显示跨月区间', (await evaluate('window.__t.txt("#bcPeriod")')).indexOf('/') >= 0);
+
+  await evaluate('window.__t.type("#setCycle", "1"); true');
+  ok('切回 1 号', await evaluate('state.settings.cycleStartDay') === 1);
+  await reload();
+  ok('起始日刷新后仍是 1', await evaluate('state.settings.cycleStartDay') === 1);
+});
+
 console.log('\n' + results.join('\n'));
 const total = results.length;
 console.log('\n' + (failed === 0 ? '全部通过' : failed + ' 项失败') + '：' + (total - failed) + '/' + total);

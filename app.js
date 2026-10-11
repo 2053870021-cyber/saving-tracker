@@ -4,11 +4,11 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.4';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
-const CYCLE_DAYS = [1, 5, 10, 15, 20, 25, 28];
+const CYCLE_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 const SWATCHES = ['#FF9F0A', '#FF375F', '#BF5AF2', '#5E5CE6', '#0A84FF', '#32ADE6',
   '#30D158', '#34C759', '#FFD60A', '#A2845E', '#8E8E93', '#FF6482'];
 const EMOJIS = ['🍚', '🚇', '🛍️', '🎮', '🏠', '💊', '📦', '☕️', '🍔', '🍜', '🥤', '🚕',
@@ -73,13 +73,25 @@ function parseMoneyInput(str) {
 }
 
 /* ---------------- 预算周期 ---------------- */
-function cycleOf(dateObj, startDay) {
+function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+
+/** 含某天的周期是从哪天开始的（起始日超出当月天数时，用当月最后一天） */
+function cycleStartFor(dateObj, startDay) {
   const y = dateObj.getFullYear();
   const m = dateObj.getMonth();
-  let start = new Date(y, m, startDay);
-  if (dateObj.getDate() < startDay) start = new Date(y, m - 1, startDay);
+  const thisDay = Math.min(startDay, daysInMonth(y, m));
+  if (dateObj.getDate() >= thisDay) return new Date(y, m, thisDay);
+  const py = m === 0 ? y - 1 : y;
+  const pm = m === 0 ? 11 : m - 1;
+  return new Date(py, pm, Math.min(startDay, daysInMonth(py, pm)));
+}
+
+function cycleOf(dateObj, startDay) {
+  const start = cycleStartFor(dateObj, startDay);
   start.setHours(0, 0, 0, 0);
-  const end = new Date(start.getFullYear(), start.getMonth() + 1, startDay);
+  const ny = start.getMonth() === 11 ? start.getFullYear() + 1 : start.getFullYear();
+  const nm = start.getMonth() === 11 ? 0 : start.getMonth() + 1;
+  const end = new Date(ny, nm, Math.min(startDay, daysInMonth(ny, nm)));
   end.setHours(0, 0, 0, 0);
   return { start: start, end: end };
 }
@@ -130,7 +142,8 @@ function normalizeState(raw) {
   if (!raw || typeof raw !== 'object') return s;
   const rs = raw.settings || {};
   s.settings.budget = Math.min(MAX_AMOUNT, Math.max(0, Math.round((Number(rs.budget) || 0) * 100) / 100));
-  s.settings.cycleStartDay = CYCLE_DAYS.indexOf(Number(rs.cycleStartDay)) >= 0 ? Number(rs.cycleStartDay) : 1;
+  const cd = Math.round(Number(rs.cycleStartDay));
+  s.settings.cycleStartDay = (cd >= 1 && cd <= 31) ? cd : 1;
   s.settings.warnRatio = [0.7, 0.8, 0.9].indexOf(Number(rs.warnRatio)) >= 0 ? Number(rs.warnRatio) : 0.8;
   s.settings.lastBackupAt = rs.lastBackupAt || null;
 
