@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<title>省钱记</title>
+<meta name="description" content="快速记账，实时警示，帮你省钱" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="省钱记" />
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
+<link rel="icon" type="image/png" href="./icons/icon-192.png" />
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+<div id="updateBar" class="update-bar hidden">
+  <span>已下载新版本</span>
+  <button id="updateBtn" class="btn-mini">刷新</button>
+</div>
+
+<main id="main">
+
+  <!-- ============ 记一笔 ============ -->
+  <section id="view-add" class="view">
+    <header class="page-head">
+      <h1>省钱记</h1>
+      <span id="todayLabel" class="muted-sm"></span>
+    </header>
+
+    <div id="warnBanner" class="banner hidden"></div>
+
+    <div class="card budget-card" id="budgetCard">
+      <div class="bc-top">
+        <span class="bc-label" id="bcPeriod">本月已花</span>
+        <span id="bcPill" class="pill hidden"></span>
+      </div>
+      <div id="bcSpent" class="bc-spent">¥0.00</div>
+      <div class="progress"><div id="bcBar" class="progress-fill"></div></div>
+      <div class="bc-grid">
+        <div><div class="k">剩余</div><div id="bcLeft" class="v">—</div></div>
+        <div><div class="k">日均可用</div><div id="bcDaily" class="v">—</div></div>
+        <div><div class="k">剩余天数</div><div id="bcDays" class="v">—</div></div>
+      </div>
+      <div id="bcHint" class="bc-hint hidden"></div>
+    </div>
+
+    <div class="card amount-card">
+      <div class="amount-row">
+        <span class="cny">¥</span><span id="amountText" class="amount">0</span>
+      </div>
+    </div>
+
+    <div class="chips" id="catChips"></div>
+
+    <div class="meta-row">
+      <input id="dateInput" type="date" class="meta-input" />
+      <input id="noteInput" type="text" class="meta-input note" maxlength="30" placeholder="备注（可选）" />
+    </div>
+
+    <div class="keypad" id="keypad"></div>
+    <button id="saveBtn" class="save-btn" disabled>保存</button>
+    <div class="spacer"></div>
+  </section>
+
+  <!-- ============ 记录 ============ -->
+  <section id="view-log" class="view hidden">
+    <header class="page-head">
+      <h1>记录</h1>
+      <span id="logTotal" class="muted-sm"></span>
+    </header>
+    <div id="logList" class="log-list"></div>
+    <button id="loadMoreMonths" class="ghost-btn hidden">显示更早的月份</button>
+    <div class="spacer"></div>
+  </section>
+
+  <!-- ============ 设置 ============ -->
+  <section id="view-settings" class="view hidden">
+    <header class="page-head"><h1>设置</h1></header>
+
+    <div class="card">
+      <div class="row">
+        <label for="setBudget">月预算</label>
+        <div class="row-val">
+          <span class="cny-sm">¥</span>
+          <input id="setBudget" type="text" inputmode="decimal" placeholder="未设置" autocomplete="off" />
+        </div>
+      </div>
+      <div class="row">
+        <label>预警阈值</label>
+        <div class="seg" id="setWarn">
+          <button data-w="0.7">70%</button>
+          <button data-w="0.8">80%</button>
+          <button data-w="0.9">90%</button>
+        </div>
+      </div>
+      <div class="row">
+        <label for="setCycle">预算周期起始日</label>
+        <select id="setCycle"></select>
+      </div>
+      <p class="hint" id="cycleHint"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>分类</h2>
+        <button id="addCatBtn" class="btn-mini">新增分类</button>
+      </div>
+      <div id="catList" class="cat-list"></div>
+      <p class="hint">内置分类不能删除（可改名、换图标、隐藏）；自定义分类删除后，其下记录会归入「其他」。</p>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>数据</h2></div>
+      <div id="backupHint" class="hint warn hidden"></div>
+      <button id="exportBtn" class="ghost-btn">导出备份（下载 JSON）</button>
+      <button id="copyBtn" class="ghost-btn">复制备份到剪贴板</button>
+      <button id="importFileBtn" class="ghost-btn">从文件导入</button>
+      <input id="importFile" type="file" accept="application/json,.json" class="hidden" />
+      <button id="pasteToggle" class="ghost-btn">粘贴文本导入</button>
+      <div id="pasteArea" class="hidden">
+        <textarea id="pasteText" rows="4" placeholder="在此粘贴备份 JSON"></textarea>
+        <div class="btn-row">
+          <button id="pasteMerge" class="btn-mini">合并</button>
+          <button id="pasteReplace" class="btn-mini danger">替换全部</button>
+        </div>
+      </div>
+      <button id="clearBtn" class="ghost-btn danger">清空全部数据</button>
+    </div>
+
+    <div class="card about">
+      <div class="row"><label>版本</label><span id="verText" class="muted-sm"></span></div>
+      <p class="hint">添加到主屏幕：用 iPhone 的 Safari 打开本页 → 点底部「分享」→「添加到主屏幕」。之后就有独立图标，断网也能用。</p>
+      <p class="hint">iOS 上从主屏幕启动的 App 与 Safari 里的页面，数据是分开的两份，请固定用主屏幕图标记账。</p>
+      <p class="hint">数据只存在这台设备本地，不上传任何服务器。建议每月导出一次备份。</p>
+      <p class="hint" id="storageState"></p>
+    </div>
+    <div class="spacer"></div>
+  </section>
+
+</main>
+
+<nav class="tabbar" id="tabbar">
+  <button class="tab active" data-view="add"><span class="ti">✏️</span>记一笔</button>
+  <button class="tab" data-view="log"><span class="ti">📋</span>记录</button>
+  <button class="tab" data-view="settings"><span class="ti">⚙️</span>设置</button>
+</nav>
+
+<div id="sheet" class="overlay hidden">
+  <div class="mask" data-close="sheet"></div>
+  <div class="sheet"><div id="sheetBody"></div></div>
+</div>
+
+<div id="modal" class="overlay hidden">
+  <div class="mask" data-close="modal"></div>
+  <div class="modal"><div id="modalBody"></div></div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="./app.js"></script>
+</body>
+</html>
