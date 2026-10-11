@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.0.1';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -821,6 +821,7 @@ function renderAll() {
   renderAmount();
   renderLog();
   renderSettings();
+  renderInstallTip();
 }
 
 /* ---------------- 事件绑定 ---------------- */
@@ -947,6 +948,33 @@ function bind() {
 }
 
 /* ---------------- Service Worker ---------------- */
+function isStandalone() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    navigator.standalone === true;
+}
+
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/** iOS Safari 首次访问时提示「添加到主屏幕」，装上或手动关掉后不再出现 */
+function renderInstallTip() {
+  const el = $('#installTip');
+  if (!el) return;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem('savetracker.tip') === 'off'; } catch (e) { /* 忽略 */ }
+  if (!isIOS() || isStandalone() || dismissed) {
+    el.classList.add('hidden');
+    return;
+  }
+  el.classList.remove('hidden');
+  $('#installTipClose').onclick = () => {
+    try { localStorage.setItem('savetracker.tip', 'off'); } catch (e) { /* 忽略 */ }
+    el.classList.add('hidden');
+  };
+}
+
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   $('#updateBtn').onclick = () => window.location.reload();

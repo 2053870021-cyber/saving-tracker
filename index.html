@@ -14,6 +14,18 @@
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon-180.png" />
 <link rel="icon" type="image/png" href="./icons/icon-192.png" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-320x568@2.png" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-375x667@2.png" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-375x812@3.png" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-390x844@3.png" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-393x852@3.png" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-402x874@3.png" media="screen and (device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-414x736@2.png" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-414x896@2.png" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-414x896@3.png" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-428x926@3.png" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-430x932@3.png" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
+<link rel="apple-touch-startup-image" href="./icons/splash/splash-440x956@3.png" media="screen and (device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" />
 <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
@@ -33,6 +45,10 @@
     </header>
 
     <div id="warnBanner" class="banner hidden"></div>
+    <div id="installTip" class="banner tip hidden">
+      <span>把它装成 App：点底部「分享」→「添加到主屏幕」</span>
+      <button id="installTipClose" class="btn-mini">知道了</button>
+    </div>
 
     <div class="card budget-card" id="budgetCard">
       <div class="bc-top">

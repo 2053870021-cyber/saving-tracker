@@ -1,5 +1,5 @@
 /* 省钱记 Service Worker — 网络优先 + 缓存兜底，离线可用 */
-const CACHE = 'savetracker-v1.0.0';
+const CACHE = 'savetracker-v1.0.1';
 const ASSETS = [
   './',
   './index.html',

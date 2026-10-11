@@ -57,8 +57,8 @@ styles.css                样式（浅色/深色自适应、iPhone 安全区）
 app.js                    全部逻辑：状态、渲染、周期计算、导入导出
 sw.js                     Service Worker（网络优先 + 缓存兜底）
 manifest.webmanifest      PWA 清单
-icons/                    图标（脚本生成）
-tools/make_icons.py       重新生成图标
+icons/                    图标 + iOS 启动图（脚本生成）
+tools/make_icons.py       重新生成图标与启动图
 tools/e2e.mjs             端到端自检脚本
 ```
 
@@ -100,11 +100,13 @@ python -m http.server 8000 --bind 127.0.0.1
 node tools/e2e.mjs http://127.0.0.1:8000/ 9222
 ```
 
-## 重新生成图标
+## 重新生成图标与启动图
 
 ```powershell
 python tools/make_icons.py
 ```
+
+脚本会输出各机型启动图的 `<link>` 片段；新增机型时把输出贴进 `index.html` 的 `<head>` 即可。
 
 ## 改代码后要刷新缓存
 

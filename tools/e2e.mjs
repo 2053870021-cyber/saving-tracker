@@ -491,6 +491,23 @@ await group('19. 清空全部数据', async () => {
 });
 
 /* ---------- 汇总 ---------- */
+await group('20. iOS 安装引导', async () => {
+  await send('Emulation.setUserAgentOverride', {
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+    platform: 'iPhone'
+  });
+  await reload();
+  ok('iOS 上出现安装引导', await evaluate('window.__t.shown("#installTip")') === true);
+  ok('引导文案提到添加到主屏幕', (await evaluate('window.__t.txt("#installTip")')).indexOf('添加到主屏幕') >= 0);
+  await evaluate('window.__t.click("#installTipClose"); true');
+  await sleep(80);
+  ok('点知道了后引导消失', await evaluate('window.__t.shown("#installTip")') === false);
+  ok('关闭状态已记住', await evaluate('localStorage.getItem("savetracker.tip")') === 'off');
+  await reload();
+  ok('重开后不再打扰', await evaluate('window.__t.shown("#installTip")') === false);
+  await send('Emulation.setUserAgentOverride', { userAgent: '', platform: '' });
+});
+
 console.log('\n' + results.join('\n'));
 const total = results.length;
 console.log('\n' + (failed === 0 ? '全部通过' : failed + ' 项失败') + '：' + (total - failed) + '/' + total);
