@@ -510,6 +510,72 @@ await group('19. 清空全部数据', async () => {
   ok('清空后刷新仍为空', await evaluate('state.expenses.length') === 0);
 });
 
+/* ---------- 23. 分类顺序可调整 ---------- */
+await group('23. 分类上下顺序可以调整', async () => {
+  await evaluate('window.__t.click("#tabbar .tab[data-view=\'settings\']"); true');
+  await sleep(80);
+  ok('每行都有拖动手柄', await evaluate('document.querySelectorAll("#catList .cat-handle").length') === 7,
+    String(await evaluate('document.querySelectorAll("#catList .cat-handle").length')));
+
+  const names0 = await evaluate('state.settings.categories.map(c => c.name).join(",")');
+  await evaluate(`(() => {
+    const list = document.querySelector('#catList');
+    const rows = Array.from(list.querySelectorAll('.cat-row'));
+    const handle = rows[0].querySelector('.cat-handle');
+    const y0 = rows[0].getBoundingClientRect().top + 12;
+    const r2 = rows[2].getBoundingClientRect();
+    const y1 = r2.top + r2.height * 0.75;
+    const mk = (type, y) => new PointerEvent(type, {
+      pointerId: 1, bubbles: true, cancelable: true, clientX: 120, clientY: y
+    });
+    handle.dispatchEvent(mk('pointerdown', y0));
+    list.dispatchEvent(mk('pointermove', (y0 + y1) / 2));
+    list.dispatchEvent(mk('pointermove', y1));
+    list.dispatchEvent(mk('pointerup', y1));
+    return true;
+  })()`);
+  await sleep(180);
+
+  const names1 = await evaluate('state.settings.categories.map(c => c.name).join(",")');
+  ok('拖动后顺序确实变了', names1 !== names0, names0 + ' → ' + names1);
+  ok('拖动不会丢分类', names1.split(',').length === names0.split(',').length, names1);
+  ok('被拖的分类不再排第一', names1.split(',')[0] !== names0.split(',')[0], names1);
+  ok('被拖的分类还在', names1.indexOf(names0.split(',')[0]) >= 0, names1);
+
+  await reload();
+  ok('刷新后顺序保持', await evaluate('state.settings.categories.map(c => c.name).join(",")') === names1,
+    await evaluate('state.settings.categories.map(c => c.name).join(",")'));
+
+  await evaluate('window.__t.click("#tabbar .tab[data-view=\'settings\']"); true');
+  await sleep(80);
+  const before = await evaluate('state.settings.categories.map(c => c.name).join(",")');
+  await evaluate(`(() => {
+    const rows = Array.from(document.querySelectorAll('#catList .cat-row'));
+    rows[3].querySelector('[data-act=edit]').click();
+  })(); true`);
+  ok('编辑弹层里有上移/下移', await evaluate('!!document.querySelector("#cUp") && !!document.querySelector("#cDown")'));
+  await evaluate('window.__t.click("#cUp"); true');
+  await sleep(150);
+  const after = await evaluate('state.settings.categories.map(c => c.name).join(",")');
+  ok('上移把第 4 项换到第 3 位',
+    after.split(',')[2] === before.split(',')[3] && after.split(',')[3] === before.split(',')[2],
+    before + ' → ' + after);
+  ok('操作后弹层自动关闭', await evaluate('window.__t.shown("#sheet")') === false);
+
+  await evaluate(`(() => {
+    const rows = Array.from(document.querySelectorAll('#catList .cat-row'));
+    rows[0].querySelector('[data-act=edit]').click();
+  })(); true`);
+  ok('第一项的上移按钮不可用', await evaluate('document.querySelector("#cUp").disabled') === true);
+  await evaluate('document.querySelector(".mask[data-close=sheet]").click(); true');
+  ok('点蒙层可以关掉弹层', await evaluate('window.__t.shown("#sheet")') === false);
+
+  await evaluate('window.__t.click("#tabbar .tab[data-view=\'add\']"); true');
+  await sleep(80);
+  const firstChip = await evaluate('window.__t.txt("#catChips .chip")');
+  ok('首页分类按钮跟着改顺序', firstChip.indexOf(after.split(',')[0]) >= 0, firstChip);
+});
+
 /* ---------- 汇总 ---------- */
 await group('20. iOS 安装引导', async () => {
   await send('Emulation.setUserAgentOverride', {

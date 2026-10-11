@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.4';
+const APP_VERSION = '1.0.5';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -608,6 +608,7 @@ function renderSettings() {
 
   $('#catList').innerHTML = s.categories.map(c =>
     '<div class="cat-row" data-id="' + esc(c.id) + '">' +
+    '<span class="cat-handle" aria-label="拖动排序">☰</span>' +
     '<div class="cat-dot" style="background:' + esc(c.color) + '22">' + esc(c.emoji) + '</div>' +
     '<div class="cat-name">' + esc(c.name) +
     '<div class="cat-tag">' + (c.builtin ? '内置' : '自定义') + (c.hidden ? ' · 已隐藏' : '') + '</div></div>' +
@@ -653,6 +654,11 @@ function openCategorySheet(id) {
   openSheet(
     '<h2>' + (isNew ? '新增分类' : '编辑分类') + '</h2>' +
     '<div class="field"><label>名称</label><input id="cName" type="text" maxlength="8" value="' + esc(c.name) + '" placeholder="如：咖啡" /></div>' +
+    (isNew ? '' :
+      '<div class="field"><label>顺序</label><div class="btn-row" style="margin-top:2px">' +
+      '<button class="btn-mini" id="cUp" style="flex:1;padding:12px">↑ 上移</button>' +
+      '<button class="btn-mini" id="cDown" style="flex:1;padding:12px">↓ 下移</button>' +
+      '</div></div>') +
     '<div class="field"><label>图标</label><div class="emoji-grid" id="cEmoji">' +
     EMOJIS.map(x => '<button data-e="' + x + '" class="' + (x === c.emoji ? 'on' : '') + '">' + x + '</button>').join('') +
     '</div></div>' +
@@ -693,6 +699,13 @@ function openCategorySheet(id) {
   };
   if (!isNew) {
     $('#cDel').onclick = () => deleteCategory(c.id);
+    const idx = state.settings.categories.findIndex(x => x.id === c.id);
+    const upBtn = $('#cUp');
+    const downBtn = $('#cDown');
+    if (idx <= 0) upBtn.disabled = true;
+    if (idx >= state.settings.categories.length - 1) downBtn.disabled = true;
+    upBtn.onclick = () => { moveCategory(c.id, -1); closeSheet(); };
+    downBtn.onclick = () => { moveCategory(c.id, 1); closeSheet(); };
   }
 }
 
@@ -721,6 +734,88 @@ function deleteCategory(id) {
     toast('已删除分类');
     return true;
   });
+}
+
+/** 上移/下移一个分类 */
+function moveCategory(id, delta) {
+  const list = state.settings.categories;
+  const i = list.findIndex(c => c.id === id);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  const tmp = list[i];
+  list[i] = list[j];
+  list[j] = tmp;
+  save();
+  renderAll();
+  toast(delta < 0 ? '已上移' : '已下移');
+}
+
+/** 按住 ☰ 拖动排序（Pointer Events，兼容 iOS Safari） */
+function initCatDrag() {
+  const list = $('#catList');
+  let dragRow = null;
+  let pointerId = null;
+  let lastY = 0;
+
+  list.addEventListener('pointerdown', ev => {
+    const handle = ev.target.closest ? ev.target.closest('.cat-handle') : null;
+    if (!handle) return;
+    dragRow = handle.closest('.cat-row');
+    if (!dragRow) return;
+    pointerId = ev.pointerId;
+    lastY = ev.clientY;
+    dragRow.classList.add('dragging');
+    try { handle.setPointerCapture(pointerId); } catch (e) { /* 合成事件可能不支持 */ }
+    ev.preventDefault();
+  });
+
+  list.addEventListener('pointermove', ev => {
+    if (!dragRow || ev.pointerId !== pointerId) return;
+    ev.preventDefault();
+    const dy = ev.clientY - lastY;
+    dragRow.style.transform = dy ? 'translateY(' + dy + 'px)' : '';
+
+    let target = null;
+    const rows = $$('.cat-row', list);
+    for (let k = 0; k < rows.length; k++) {
+      if (rows[k] === dragRow) continue;
+      const rect = rows[k].getBoundingClientRect();
+      if (ev.clientY >= rect.top && ev.clientY <= rect.bottom) { target = rows[k]; break; }
+    }
+    if (target) {
+      const rect = target.getBoundingClientRect();
+      const after = ev.clientY > rect.top + rect.height / 2;
+      list.insertBefore(dragRow, after ? target.nextSibling : target);
+      lastY = ev.clientY;
+      dragRow.style.transform = '';
+    }
+  });
+
+  const finish = () => {
+    if (!dragRow) return;
+    dragRow.classList.remove('dragging');
+    dragRow.style.transform = '';
+    dragRow = null;
+    pointerId = null;
+    persistCategoryOrder();
+  };
+  list.addEventListener('pointerup', finish);
+  list.addEventListener('pointercancel', finish);
+}
+
+/** 把界面上的顺序写回数据 */
+function persistCategoryOrder() {
+  const ids = $$('.cat-row', $('#catList')).map(r => r.getAttribute('data-id'));
+  const byId = {};
+  state.settings.categories.forEach(c => { byId[c.id] = c; });
+  const next = [];
+  ids.forEach(id => { if (byId[id]) next.push(byId[id]); });
+  state.settings.categories.forEach(c => { if (ids.indexOf(c.id) < 0) next.push(c); });
+  const changed = next.map(c => c.id).join(',') !== state.settings.categories.map(c => c.id).join(',');
+  state.settings.categories = next;
+  save();
+  renderAll();
+  if (changed) toast('分类顺序已保存');
 }
 
 /* ---------------- 数据：导出 / 导入 / 清空 ---------------- */
@@ -971,6 +1066,7 @@ function bind() {
     if (act === 'del') deleteCategory(id);
   });
   $('#addCatBtn').onclick = () => openCategorySheet(null);
+  initCatDrag();
 
   /* 数据 */
   $('#exportBtn').onclick = doExport;
