@@ -195,11 +195,13 @@ function normalizeState(raw) {
     });
   }
   if (!hasBalance) {
-    const cy = cycleOf(new Date(), s.settings.cycleStartDay);
-    const spent = s.expenses
-      .filter(e => e.date >= ymd(cy.start) && e.date < ymd(cy.end))
-      .reduce((sum, e) => sum + e.amount, 0);
-    s.settings.balance = Math.round((legacyBudget - spent) * 100) / 100;
+    if (legacyBudget > 0) {
+      const cy = cycleOf(new Date(), s.settings.cycleStartDay);
+      const spent = s.expenses
+        .filter(e => e.date >= ymd(cy.start) && e.date < ymd(cy.end))
+        .reduce((sum, e) => sum + e.amount, 0);
+      s.settings.balance = Math.round((legacyBudget - spent) * 100) / 100;
+    }
   }
   return s;
 }
