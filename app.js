@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -72,7 +72,7 @@ function parseMoneyInput(str) {
   return Math.min(Math.round(v * 100) / 100, MAX_AMOUNT);
 }
 
-/* ---------------- 预算周期 ---------------- */
+/* ---------------- 账单周期 ---------------- */
 function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
 
 /** 含某天的周期是从哪天开始的（起始日超出当月天数时，用当月最后一天） */
@@ -96,6 +96,16 @@ function cycleOf(dateObj, startDay) {
   return { start: start, end: end };
 }
 
+function cycleRangeLabel(cycle) {
+  const start = cycle.start instanceof Date ? cycle.start : new Date(cycle.startKey + 'T00:00:00');
+  const endExclusive = cycle.end instanceof Date ? cycle.end : new Date(cycle.endKey + 'T00:00:00');
+  const end = new Date(endExclusive.getTime() - 86400000);
+  const left = start.getFullYear() + '年' + (start.getMonth() + 1) + '月' + start.getDate() + '日';
+  const right = (end.getFullYear() === start.getFullYear() ? '' : end.getFullYear() + '年') +
+    (end.getMonth() + 1) + '月' + end.getDate() + '日';
+  return left + '–' + right;
+}
+
 function daysBetween(a, b) { return Math.round((b - a) / 86400000); }
 
 function currentCycle() {
@@ -106,9 +116,7 @@ function currentCycle() {
     startKey: ymd(c.start),
     endKey: ymd(c.end),
     daysLeft: Math.max(1, daysBetween(t, c.end)),
-    label: state.settings.cycleStartDay === 1
-      ? (c.start.getMonth() + 1) + '月'
-      : (c.start.getMonth() + 1) + '/' + c.start.getDate() + '–' + (c.end.getMonth() + 1) + '/' + c.end.getDate()
+    label: cycleRangeLabel(c)
   };
 }
 
@@ -121,9 +129,8 @@ function defaultState() {
   return {
     version: 1,
     settings: {
-      budget: 0,
+      balance: 0,
       cycleStartDay: 1,
-      warnRatio: 0.8,
       categories: PRESET_CATEGORIES.map(c => Object.assign({}, c)),
       lastBackupAt: null
     },
@@ -134,7 +141,7 @@ function defaultState() {
 let state = defaultState();
 let storageOK = true;
 let logMonthCount = 1;
-let budgetAdjustMode = 'add';
+let balanceAdjustMode = 'add';
 
 const draft = { amountStr: '', catId: 'food', date: todayStr(), note: '' };
 
@@ -142,10 +149,11 @@ function normalizeState(raw) {
   const s = defaultState();
   if (!raw || typeof raw !== 'object') return s;
   const rs = raw.settings || {};
-  s.settings.budget = Math.min(MAX_AMOUNT, Math.max(0, Math.round((Number(rs.budget) || 0) * 100) / 100));
+  const legacyBudget = Math.min(MAX_AMOUNT, Math.max(0, Math.round((Number(rs.budget) || 0) * 100) / 100));
+  const hasBalance = Object.prototype.hasOwnProperty.call(rs, 'balance') && isFinite(Number(rs.balance));
+  if (hasBalance) s.settings.balance = Math.max(-MAX_AMOUNT, Math.min(MAX_AMOUNT, Math.round(Number(rs.balance) * 100) / 100));
   const cd = Math.round(Number(rs.cycleStartDay));
   s.settings.cycleStartDay = (cd >= 1 && cd <= 31) ? cd : 1;
-  s.settings.warnRatio = [0.7, 0.8, 0.9].indexOf(Number(rs.warnRatio)) >= 0 ? Number(rs.warnRatio) : 0.8;
   s.settings.lastBackupAt = rs.lastBackupAt || null;
 
   const list = [];
@@ -185,6 +193,13 @@ function normalizeState(raw) {
         createdAt: Number((e && e.createdAt)) || Date.parse(date + 'T12:00:00') || Date.now()
       });
     });
+  }
+  if (!hasBalance) {
+    const cy = cycleOf(new Date(), s.settings.cycleStartDay);
+    const spent = s.expenses
+      .filter(e => e.date >= ymd(cy.start) && e.date < ymd(cy.end))
+      .reduce((sum, e) => sum + e.amount, 0);
+    s.settings.balance = Math.round((legacyBudget - spent) * 100) / 100;
   }
   return s;
 }
@@ -286,114 +301,39 @@ function renderHeader() {
 
 function renderBudget() {
   const cy = currentCycle();
-  const budget = state.settings.budget;
   const items = expensesInCycle(cy);
   const spent = Math.round(items.reduce((s, e) => s + e.amount, 0) * 100) / 100;
-  const ratio = budget > 0 ? spent / budget : 0;
-  const left = Math.round((budget - spent) * 100) / 100;
-  const level = budget <= 0 ? 'none' : (ratio >= 1 ? 'over' : (ratio >= state.settings.warnRatio ? 'warn' : 'ok'));
+  const balance = state.settings.balance;
 
-  $('#bcPeriod').textContent = state.settings.cycleStartDay === 1
-    ? '本月还剩'
-    : '本期还剩 · ' + cy.label;
-
-  /* 主角：还剩多少钱（记账时数字滚动减少） */
+  $('#bcPeriod').textContent = '当前余额';
   const heroEl = $('#bcLeft');
-  heroEl.className = 'bc-hero ' + (level === 'none' ? '' : level);
-  if (budget <= 0) {
-    heroEl.textContent = '—';
-    lastLeftShown = null;
+  heroEl.className = 'bc-hero' + (balance < 0 ? ' over' : '');
+  if (lastBalanceShown === null || lastBalanceShown === balance) {
+    heroEl.textContent = money(balance);
   } else {
-    if (lastLeftShown === null || lastLeftShown === left) {
-      heroEl.textContent = money(left);
-    } else {
-      animateMoney(heroEl, lastLeftShown, left);
-    }
-    lastLeftShown = left;
+    animateMoney(heroEl, lastBalanceShown, balance);
   }
+  lastBalanceShown = balance;
 
-  /* 三格明细 */
-  const spentEl = $('#bcSpent');
-  spentEl.textContent = money(spent);
-  spentEl.className = 'v';
+  $('#bcSpent').textContent = money(spent);
+  $('#bcCycleStart').textContent = cy.startKey.slice(5).replace('-', '/');
+  $('#bcDays').textContent = cy.daysLeft + ' 天';
 
-  const fill = $('#bcBar');
-  fill.style.width = (budget > 0 ? Math.min(ratio, 1) * 100 : 0) + '%';
-  fill.className = 'progress-fill ' + (level === 'over' ? 'over' : (level === 'warn' ? 'warn' : ''));
-
-  const pill = $('#bcPill');
-  if (budget > 0) {
-    pill.classList.remove('hidden');
-    pill.className = 'pill ' + level;
-    pill.textContent = level === 'over'
-      ? '已超支'
-      : (level === 'warn' ? '已用 ' + Math.round(ratio * 100) + '%' : '已用 ' + Math.round(ratio * 100) + '%');
-  } else {
-    pill.classList.add('hidden');
-  }
-
-  const dailyEl = $('#bcDaily');
-  const daysEl = $('#bcDays');
-  daysEl.textContent = cy.daysLeft + ' 天';
-  daysEl.className = 'v';
-
-  if (budget <= 0) {
-    dailyEl.textContent = '—';
-    dailyEl.className = 'v';
-  } else if (left < 0) {
-    dailyEl.textContent = '已超支';
-    dailyEl.className = 'v over';
-  } else {
-    const daily = Math.round((left / cy.daysLeft) * 100) / 100;
-    dailyEl.textContent = money(daily);
-    const todaySpent = state.expenses
-      .filter(e => e.date === todayStr())
-      .reduce((s, e) => s + e.amount, 0);
-    dailyEl.className = 'v ' + (todaySpent > daily ? 'warn' : 'ok');
-  }
-
-  /* 横幅 */
-  const banner = $('#warnBanner');
-  if (level === 'over') {
-    banner.className = 'banner over';
-    banner.textContent = '⚠️ 钱花完了，还超了 ' + money(Math.abs(left)) + '。本周期还有 ' +
-      cy.daysLeft + ' 天，建议先停掉非必要支出。';
-  } else if (level === 'warn') {
-    banner.className = 'banner warn';
-    banner.textContent = '注意：只剩 ' + money(left) + ' 了（已用 ' + Math.round(ratio * 100) +
-      '%），还有 ' + cy.daysLeft + ' 天，悠着点花。';
-  } else {
-    banner.className = 'banner hidden';
-    banner.textContent = '';
-  }
-
-  /* 卡片底部提示 */
   const hint = $('#bcHint');
   const staleDays = state.settings.lastBackupAt
     ? daysBetween(new Date(state.settings.lastBackupAt), new Date())
     : null;
-  if (budget <= 0) {
-    hint.className = 'bc-hint';
-    hint.innerHTML = '还没设置每月可用金额。先填个数，之后每记一笔就自动从里面减掉。' +
-      '<button id="hintGoSet">去设置</button>';
-    $('#hintGoSet').onclick = () => setTab('settings');
-  } else if (state.expenses.length > 0 && (staleDays === null || staleDays >= BACKUP_STALE_DAYS)) {
-    hint.className = 'bc-hint';
-    hint.innerHTML = staleDays === null
-      ? '还没导出过备份，建议去设置里导出一份，防止数据丢失。'
-      : '已经 ' + staleDays + ' 天没备份了，建议去设置里导出一次。';
-  } else {
-    const todaySpent = Math.round(state.expenses
-      .filter(e => e.date === todayStr())
-      .reduce((s, e) => s + e.amount, 0) * 100) / 100;
-    hint.className = 'bc-hint';
-    hint.textContent = '本月可用 ' + money(budget) + ' · 今天已花 ' + money(todaySpent) +
-      ' · 还剩 ' + cy.daysLeft + ' 天';
-  }
+  const endDate = ymd(new Date(new Date(cy.endKey).getTime() - 86400000));
+  const backupHint = state.expenses.length > 0 && (staleDays === null || staleDays >= BACKUP_STALE_DAYS)
+    ? (staleDays === null ? '还没有导出过备份，建议去设置里导出一份。' : '已经 ' + staleDays + ' 天没备份了，建议导出一次。')
+    : '';
+  hint.className = 'bc-hint';
+  hint.textContent = '账单周期：' + cy.startKey + ' 至 ' + endDate + '。余额会跨周期结转。' +
+    (backupHint ? ' ' + backupHint : '');
 }
 
-/** 数字滚动动画：让「还剩多少」在记账时肉眼可见地减少 */
-let lastLeftShown = null;
+/** 数字滚动动画：记账或调整余额时显示余额变化 */
+let lastBalanceShown = null;
 
 function animateMoney(el, from, to) {
   if (el.__raf) cancelAnimationFrame(el.__raf);
@@ -453,7 +393,6 @@ function addExpense() {
   const amount = parseAmountInput(draft.amountStr);
   if (amount <= 0) return;
 
-  const before = budgetSnapshot();
   const note = $('#noteInput').value.trim().slice(0, 30);
   const date = clampDate($('#dateInput').value || todayStr());
   const cat = catById(draft.catId) || catById('other');
@@ -462,6 +401,7 @@ function addExpense() {
     id: uid(), amount: amount, catId: cat.id,
     note: note, date: date, createdAt: Date.now()
   });
+  state.settings.balance = Math.round((state.settings.balance - amount) * 100) / 100;
   save();
 
   draft.amountStr = '';
@@ -474,28 +414,7 @@ function addExpense() {
   renderLog();
   renderSettings();
 
-  const after = budgetSnapshot();
   toast('已记 ' + money(amount) + ' · ' + cat.name);
-
-  if (after.level === 'over' && before.level !== 'over') {
-    alertModal('钱花完了', '每月可用的 <b>' + money(after.budget) + '</b> 已经花光，还超出 <b>' +
-      money(after.spent - after.budget) + '</b>。<br>本周期还有 ' + after.daysLeft +
-      ' 天，建议先停掉非必要支出。', '知道了');
-  } else if (after.level === 'warn' && before.level === 'ok') {
-    alertModal('余额预警', '只剩 <b>' + money(after.budget - after.spent) + '</b> 了（已用 <b>' +
-      Math.round(after.ratio * 100) + '%</b>），本周期还有 ' + after.daysLeft + ' 天。', '我会注意');
-  }
-}
-
-function budgetSnapshot() {
-  const cy = currentCycle();
-  const budget = state.settings.budget;
-  const spent = Math.round(expensesInCycle(cy).reduce((s, e) => s + e.amount, 0) * 100) / 100;
-  const ratio = budget > 0 ? spent / budget : 0;
-  return {
-    budget: budget, spent: spent, ratio: ratio, daysLeft: cy.daysLeft,
-    level: budget <= 0 ? 'none' : (ratio >= 1 ? 'over' : (ratio >= state.settings.warnRatio ? 'warn' : 'ok'))
-  };
 }
 
 /* ---------------- 渲染：记录 ---------------- */
@@ -503,16 +422,22 @@ function renderLog() {
   const box = $('#logList');
   $('#logTotal').textContent = state.expenses.length ? state.expenses.length + ' 笔记录' : '';
   const now = new Date();
+  const todayCycle = currentCycle();
   const groups = [];
   for (let i = 0; i < logMonthCount; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = d.getFullYear() + '-' + pad2(d.getMonth() + 1);
+    const base = cycleStartFor(now, state.settings.cycleStartDay);
+    const month = new Date(base.getFullYear(), base.getMonth() - i, 1);
+    const start = new Date(month.getFullYear(), month.getMonth(),
+      Math.min(state.settings.cycleStartDay, daysInMonth(month.getFullYear(), month.getMonth())));
+    const cycle = cycleOf(start, state.settings.cycleStartDay);
+    const key = ymd(cycle.start);
+    const endKey = ymd(cycle.end);
     const items = state.expenses
-      .filter(e => e.date.slice(0, 7) === key)
+      .filter(e => e.date >= key && e.date < endKey)
       .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : (a.date < b.date ? 1 : -1)));
     groups.push({
       key: key,
-      label: d.getFullYear() + '年' + (d.getMonth() + 1) + '月',
+      label: cycleRangeLabel(cycle),
       items: items,
       sum: Math.round(items.reduce((s, e) => s + e.amount, 0) * 100) / 100
     });
@@ -528,14 +453,13 @@ function renderLog() {
           '<div class="exp-right"><div class="exp-amt">' + money(e.amount) + '</div>' +
           '<div class="exp-date">' + e.date.slice(5).replace('-', '/') + '</div></div></div>';
       }).join('')
-      : '<div class="empty-tip">' + (g.key === now.getFullYear() + '-' + pad2(now.getMonth() + 1)
-        ? '本月还没有记录' : '这个月没有记录') + '</div>';
+      : '<div class="empty-tip">' + (g.key === todayCycle.startKey ? '本期还没有记录' : '这个账期没有记录') + '</div>';
     return '<div class="month-group"><div class="month-head"><span>' + g.label + '</span>' +
       '<span class="msum">' + g.items.length + ' 笔 · ' + money(g.sum) + '</span></div>' + rows + '</div>';
   }).join('');
 
   const earliest = state.expenses.reduce((m, e) => (m === null || e.date < m ? e.date : m), null);
-  const shown = groups[groups.length - 1].key + '-01';
+  const shown = groups[groups.length - 1].key;
   $('#loadMoreMonths').classList.toggle('hidden', !(earliest && earliest < shown));
 }
 
@@ -567,6 +491,7 @@ function openExpenseSheet(id) {
   $('#edSave').onclick = () => {
     const amt = parseAmountInput($('#edAmount').value);
     if (amt <= 0) { toast('请输入大于 0 的金额'); return; }
+    state.settings.balance = Math.round((state.settings.balance + e.amount - amt) * 100) / 100;
     e.amount = amt;
     e.catId = state_.catId;
     e.date = clampDate($('#edDate').value || e.date);
@@ -584,6 +509,7 @@ function openExpenseSheet(id) {
     }).then(ok => {
       if (!ok) return;
       state.expenses = state.expenses.filter(x => x.id !== e.id);
+      state.settings.balance = Math.round((state.settings.balance + e.amount) * 100) / 100;
       save();
       closeSheet();
       renderAll();
@@ -595,15 +521,13 @@ function openExpenseSheet(id) {
 /* ---------------- 渲染：设置 ---------------- */
 function renderSettings() {
   const s = state.settings;
-  $('#setBudget').value = s.budget > 0 ? String(s.budget) : '';
-  $('#budgetCurrent').textContent = '当前 ' + money(s.budget);
-  $$('#budgetAdjustMode button').forEach(b => {
-    const selected = b.getAttribute('data-mode') === budgetAdjustMode;
+  $('#balanceCurrent').textContent = '当前 ' + money(s.balance);
+  $$('#balanceAdjustMode button').forEach(b => {
+    const selected = b.getAttribute('data-mode') === balanceAdjustMode;
     b.classList.toggle('on', selected);
     b.setAttribute('aria-pressed', String(selected));
   });
-  $('#applyBudgetAdjustment').textContent = budgetAdjustMode === 'add' ? '确认加钱' : '确认减钱';
-  $$('#setWarn button').forEach(b => b.classList.toggle('on', Number(b.getAttribute('data-w')) === s.warnRatio));
+  $('#applyBalanceAdjustment').textContent = balanceAdjustMode === 'add' ? '添加生活费' : '确认减少余额';
 
   const sel = $('#setCycle');
   if (!sel.options.length) {
@@ -611,7 +535,7 @@ function renderSettings() {
   }
   sel.value = String(s.cycleStartDay);
   const cy = currentCycle();
-  $('#cycleHint').textContent = '当前周期：' + cy.startKey + ' 至 ' +
+  $('#cycleHint').textContent = '当前账单周期：' + cy.startKey + ' 至 ' +
     ymd(new Date(new Date(cy.endKey).getTime() - 86400000)) + '，共 ' + cy.daysLeft + ' 天剩余。';
 
   $('#catList').innerHTML = s.categories.map(c =>
@@ -919,6 +843,7 @@ function applyImport(text, mode) {
     if (mode === 'replace') {
       state = incoming;
     } else {
+      const useIncomingBalance = state.expenses.length === 0 && state.settings.balance === 0;
       const have = {};
       state.expenses.forEach(e => { have[e.id] = true; });
       const existingCats = {};
@@ -927,8 +852,8 @@ function applyImport(text, mode) {
         if (!existingCats[c.id]) state.settings.categories.push(c);
       });
       incoming.expenses.forEach(e => { if (!have[e.id]) state.expenses.push(e); });
+      if (useIncomingBalance) state.settings.balance = incoming.settings.balance;
     }
-    if (!state.settings.budget) state.settings.budget = incoming.settings.budget;
     save();
     logMonthCount = 1;
     renderAll();
@@ -1028,54 +953,36 @@ function bind() {
   };
 
   /* 设置项 */
-  $('#setBudget').onchange = () => {
-    const v = parseMoneyInput($('#setBudget').value);
-    state.settings.budget = v;
-    save();
-    renderBudget();
-    renderSettings();
-    toast(state.settings.budget > 0
-      ? '每月可用金额已设为 ' + money(state.settings.budget)
-      : '已取消每月可用金额');
-  };
-  $('#budgetAdjustMode').addEventListener('click', ev => {
+  $('#balanceAdjustMode').addEventListener('click', ev => {
     const b = ev.target.closest('button[data-mode]');
     if (!b) return;
-    budgetAdjustMode = b.getAttribute('data-mode');
+    balanceAdjustMode = b.getAttribute('data-mode');
     renderSettings();
   });
-  $('#applyBudgetAdjustment').addEventListener('click', () => {
-    const amount = parseMoneyInput($('#budgetAdjustAmount').value);
+  $('#applyBalanceAdjustment').addEventListener('click', () => {
+    const amount = parseMoneyInput($('#balanceAdjustAmount').value);
     if (amount <= 0) { toast('请输入大于 0 的调整金额'); return; }
-    const current = state.settings.budget;
-    if (budgetAdjustMode === 'add' && current + amount > MAX_AMOUNT) {
-      toast('调整后不能超过 ' + money(MAX_AMOUNT));
+    const current = state.settings.balance;
+    if (balanceAdjustMode === 'add' && current + amount > MAX_AMOUNT) {
+      toast('调整后余额不能超过 ' + money(MAX_AMOUNT));
       return;
     }
-    if (budgetAdjustMode === 'subtract' && amount > current) {
-      toast('减少金额不能超过当前可用金额');
+    if (balanceAdjustMode === 'subtract' && amount > current) {
+      toast('减少金额不能超过当前余额');
       return;
     }
-    state.settings.budget = Math.round((current + (budgetAdjustMode === 'add' ? amount : -amount)) * 100) / 100;
+    state.settings.balance = Math.round((current + (balanceAdjustMode === 'add' ? amount : -amount)) * 100) / 100;
     save();
-    $('#budgetAdjustAmount').value = '';
+    $('#balanceAdjustAmount').value = '';
     renderBudget();
     renderSettings();
-    toast((budgetAdjustMode === 'add' ? '已增加 ' : '已减少 ') + money(amount) + '，当前可用金额 ' + money(state.settings.budget));
-  });
-  $('#setWarn').addEventListener('click', ev => {
-    const b = ev.target.closest('button');
-    if (!b) return;
-    state.settings.warnRatio = Number(b.getAttribute('data-w'));
-    save();
-    renderBudget();
-    renderSettings();
+    toast((balanceAdjustMode === 'add' ? '已添加生活费 ' : '已减少余额 ') + money(amount) + '，当前余额 ' + money(state.settings.balance));
   });
   $('#setCycle').addEventListener('change', () => {
     state.settings.cycleStartDay = Number($('#setCycle').value);
     save();
     renderAll();
-    toast('周期起始日已改为每月 ' + state.settings.cycleStartDay + ' 号');
+    toast('账单起始日已改为每月 ' + state.settings.cycleStartDay + ' 号');
   });
 
   $('#catList').addEventListener('click', ev => {

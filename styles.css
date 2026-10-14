@@ -280,11 +280,6 @@ main {
 .row label { font-size: 15px; }
 .row-val { display: flex; align-items: center; gap: 2px; }
 .cny-sm { color: var(--text-2); font-size: 16px; }
-#setBudget {
-  width: 130px; text-align: right; border: 0; background: transparent;
-  color: var(--text); font-size: 17px; font-weight: 600; font-family: inherit; padding: 2px;
-}
-
 .balance-adjust {
   margin: 10px 0 6px;
   padding: 12px;
@@ -304,13 +299,13 @@ main {
   flex: 1; min-width: 0; padding: 7px 10px; border-radius: 11px;
   background: var(--card); box-shadow: inset 0 0 0 1px var(--line);
 }
-#budgetAdjustAmount {
+#balanceAdjustAmount {
   width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
   color: var(--text); font-size: 16px; font-weight: 600; font-family: inherit;
   text-align: right;
 }
-#budgetAdjustAmount::placeholder { color: var(--text-3); font-weight: 400; }
-#budgetAdjustAmount:focus-visible {
+#balanceAdjustAmount::placeholder { color: var(--text-3); font-weight: 400; }
+#balanceAdjustAmount:focus-visible {
   outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px;
 }
 .balance-adjust .ghost-btn {

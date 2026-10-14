@@ -44,7 +44,6 @@
       <span id="todayLabel" class="muted-sm"></span>
     </header>
 
-    <div id="warnBanner" class="banner hidden"></div>
     <div id="installTip" class="banner tip hidden">
       <span>把它装成 App：点底部「分享」→「添加到主屏幕」</span>
       <button id="installTipClose" class="btn-mini">知道了</button>
@@ -52,15 +51,13 @@
 
     <div class="card budget-card" id="budgetCard">
       <div class="bc-top">
-        <span class="bc-label" id="bcPeriod">本月还剩</span>
-        <span id="bcPill" class="pill hidden"></span>
+        <span class="bc-label" id="bcPeriod">当前余额</span>
       </div>
       <div id="bcLeft" class="bc-hero">¥0.00</div>
-      <div class="progress"><div id="bcBar" class="progress-fill"></div></div>
       <div class="bc-grid">
-        <div><div class="k">已花</div><div id="bcSpent" class="v">¥0.00</div></div>
-        <div><div class="k">每天可花</div><div id="bcDaily" class="v">—</div></div>
-        <div><div class="k">剩余天数</div><div id="bcDays" class="v">—</div></div>
+        <div><div class="k">本期账单</div><div id="bcSpent" class="v">¥0.00</div></div>
+        <div><div class="k">账单起始</div><div id="bcCycleStart" class="v">—</div></div>
+        <div><div class="k">距下期账单</div><div id="bcDays" class="v">—</div></div>
       </div>
       <div id="bcHint" class="bc-hint hidden"></div>
     </div>
@@ -99,45 +96,29 @@
     <header class="page-head"><h1>设置</h1></header>
 
     <div class="card">
-      <div class="row">
-        <label for="setBudget">每月可用金额</label>
-        <div class="row-val">
-          <span class="cny-sm">¥</span>
-          <input id="setBudget" type="text" inputmode="decimal" placeholder="未设置" autocomplete="off" />
-        </div>
-      </div>
-      <p class="hint">填你每个月打算花多少（可以带小数，如 3000.50）。之后每记一笔，首页的「还剩」就自动减掉这笔钱。</p>
       <div class="balance-adjust">
         <div class="balance-adjust-head">
-          <strong>调整每月可用金额</strong>
-          <span id="budgetCurrent" class="muted-sm"></span>
+          <strong>账户余额</strong>
+          <span id="balanceCurrent" class="muted-sm"></span>
         </div>
         <div class="balance-adjust-controls">
-          <div class="seg" id="budgetAdjustMode" role="group" aria-label="选择金额调整方式">
-            <button type="button" data-mode="add" aria-pressed="true" class="on">加钱</button>
-            <button type="button" data-mode="subtract" aria-pressed="false">减钱</button>
+          <div class="seg" id="balanceAdjustMode" role="group" aria-label="选择余额调整方式">
+            <button type="button" data-mode="add" aria-pressed="true" class="on">加生活费</button>
+            <button type="button" data-mode="subtract" aria-pressed="false">减余额</button>
           </div>
-          <label class="adjust-input-wrap" for="budgetAdjustAmount">
+          <label class="adjust-input-wrap" for="balanceAdjustAmount">
             <span class="cny-sm">¥</span>
-            <input id="budgetAdjustAmount" type="text" inputmode="decimal" placeholder="金额" autocomplete="off" aria-label="调整金额" />
+            <input id="balanceAdjustAmount" type="text" inputmode="decimal" placeholder="金额" autocomplete="off" aria-label="调整余额金额" />
           </label>
         </div>
-        <button id="applyBudgetAdjustment" class="ghost-btn" type="button">确认加钱</button>
+        <button id="applyBalanceAdjustment" class="ghost-btn" type="button">添加生活费</button>
       </div>
       <div class="row">
-        <label>预警阈值</label>
-        <div class="seg" id="setWarn">
-          <button data-w="0.7">70%</button>
-          <button data-w="0.8">80%</button>
-          <button data-w="0.9">90%</button>
-        </div>
-      </div>
-      <div class="row">
-        <label for="setCycle">预算周期起始日</label>
+        <label for="setCycle">账单周期起始日</label>
         <select id="setCycle"></select>
       </div>
       <p class="hint" id="cycleHint"></p>
-      <p class="hint">可以选 1–31 任意一天（比如发薪日 8 号、12 号）。如果某个月没有这一天（例如 2 月没有 31 号），就从那个月的最后一天开始算。</p>
+      <p class="hint">账单按这个日期分期统计；余额会持续结转，不会自动清零。生活费到账后请手动添加。</p>
     </div>
 
     <div class="card">
