@@ -285,6 +285,40 @@ main {
   color: var(--text); font-size: 17px; font-weight: 600; font-family: inherit; padding: 2px;
 }
 
+.balance-adjust {
+  margin: 10px 0 6px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--bg);
+}
+.balance-adjust-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  margin-bottom: 10px;
+}
+.balance-adjust-head strong { font-size: 14px; font-weight: 600; }
+.balance-adjust-controls { display: flex; align-items: center; gap: 10px; }
+.balance-adjust-controls .seg { flex: 0 0 auto; }
+.balance-adjust-controls .seg button { padding: 7px 12px; }
+.adjust-input-wrap {
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  flex: 1; min-width: 0; padding: 7px 10px; border-radius: 11px;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--line);
+}
+#budgetAdjustAmount {
+  width: 100%; min-width: 0; border: 0; outline: 0; background: transparent;
+  color: var(--text); font-size: 16px; font-weight: 600; font-family: inherit;
+  text-align: right;
+}
+#budgetAdjustAmount::placeholder { color: var(--text-3); font-weight: 400; }
+#budgetAdjustAmount:focus-visible {
+  outline: 2px solid var(--blue); outline-offset: 3px; border-radius: 2px;
+}
+.balance-adjust .ghost-btn {
+  margin-top: 10px; background: var(--green); color: #fff; font-weight: 600;
+  box-shadow: none;
+}
+.balance-adjust .ghost-btn:active { opacity: .82; }
+
 .seg { display: flex; background: var(--bg); border-radius: 11px; padding: 3px; gap: 2px; }
 .seg button {
   border: 0; background: transparent; color: var(--text-2); font-size: 14px;
@@ -407,3 +441,4 @@ select#setCycle {
   animation: up .2s ease-out;
 }
 @media (prefers-color-scheme: dark) { .toast { background: rgba(255, 255, 255, .9); color: #000; } }
+

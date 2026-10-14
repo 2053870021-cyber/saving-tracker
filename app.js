@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.5';
+const APP_VERSION = '1.0.6';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -134,6 +134,7 @@ function defaultState() {
 let state = defaultState();
 let storageOK = true;
 let logMonthCount = 1;
+let budgetAdjustMode = 'add';
 
 const draft = { amountStr: '', catId: 'food', date: todayStr(), note: '' };
 
@@ -595,6 +596,13 @@ function openExpenseSheet(id) {
 function renderSettings() {
   const s = state.settings;
   $('#setBudget').value = s.budget > 0 ? String(s.budget) : '';
+  $('#budgetCurrent').textContent = '当前 ' + money(s.budget);
+  $$('#budgetAdjustMode button').forEach(b => {
+    const selected = b.getAttribute('data-mode') === budgetAdjustMode;
+    b.classList.toggle('on', selected);
+    b.setAttribute('aria-pressed', String(selected));
+  });
+  $('#applyBudgetAdjustment').textContent = budgetAdjustMode === 'add' ? '确认加钱' : '确认减钱';
   $$('#setWarn button').forEach(b => b.classList.toggle('on', Number(b.getAttribute('data-w')) === s.warnRatio));
 
   const sel = $('#setCycle');
@@ -1030,6 +1038,31 @@ function bind() {
       ? '每月可用金额已设为 ' + money(state.settings.budget)
       : '已取消每月可用金额');
   };
+  $('#budgetAdjustMode').addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-mode]');
+    if (!b) return;
+    budgetAdjustMode = b.getAttribute('data-mode');
+    renderSettings();
+  });
+  $('#applyBudgetAdjustment').addEventListener('click', () => {
+    const amount = parseMoneyInput($('#budgetAdjustAmount').value);
+    if (amount <= 0) { toast('请输入大于 0 的调整金额'); return; }
+    const current = state.settings.budget;
+    if (budgetAdjustMode === 'add' && current + amount > MAX_AMOUNT) {
+      toast('调整后不能超过 ' + money(MAX_AMOUNT));
+      return;
+    }
+    if (budgetAdjustMode === 'subtract' && amount > current) {
+      toast('减少金额不能超过当前可用金额');
+      return;
+    }
+    state.settings.budget = Math.round((current + (budgetAdjustMode === 'add' ? amount : -amount)) * 100) / 100;
+    save();
+    $('#budgetAdjustAmount').value = '';
+    renderBudget();
+    renderSettings();
+    toast((budgetAdjustMode === 'add' ? '已增加 ' : '已减少 ') + money(amount) + '，当前可用金额 ' + money(state.settings.budget));
+  });
   $('#setWarn').addEventListener('click', ev => {
     const b = ev.target.closest('button');
     if (!b) return;
@@ -1160,3 +1193,4 @@ registerSW();
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) renderAll();
 });
+
