@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.0.8';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -121,7 +121,11 @@ function currentCycle() {
 }
 
 function expensesInCycle(cy) {
-  return state.expenses.filter(e => e.date >= cy.startKey && e.date < cy.endKey);
+  return state.expenses.filter(e => (e.type || 'expense') === 'expense' && e.date >= cy.startKey && e.date < cy.endKey);
+}
+
+function balanceEffect(entry) {
+  return entry.type === 'income' ? entry.amount : -entry.amount;
 }
 
 /* ---------------- 状态 ---------------- */
@@ -184,10 +188,12 @@ function normalizeState(raw) {
       const date = String((e && e.date) || '').slice(0, 10);
       if (!(amount > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
       const catId = list.some(c => c.id === (e && e.catId)) ? String(e.catId) : 'other';
+      const type = ['income', 'reduction'].indexOf(e && e.type) >= 0 ? e.type : 'expense';
       s.expenses.push({
         id: String((e && e.id) || uid()),
         amount: amount,
-        catId: catId,
+        catId: type === 'expense' ? catId : 'other',
+        type: type,
         note: String((e && e.note) || '').slice(0, 30),
         date: date,
         createdAt: Number((e && e.createdAt)) || Date.parse(date + 'T12:00:00') || Date.now()
@@ -198,7 +204,7 @@ function normalizeState(raw) {
     if (legacyBudget > 0) {
       const cy = cycleOf(new Date(), s.settings.cycleStartDay);
       const spent = s.expenses
-        .filter(e => e.date >= ymd(cy.start) && e.date < ymd(cy.end))
+        .filter(e => (e.type || 'expense') === 'expense' && e.date >= ymd(cy.start) && e.date < ymd(cy.end))
         .reduce((sum, e) => sum + e.amount, 0);
       s.settings.balance = Math.round((legacyBudget - spent) * 100) / 100;
     }
@@ -400,7 +406,7 @@ function addExpense() {
   const cat = catById(draft.catId) || catById('other');
 
   state.expenses.push({
-    id: uid(), amount: amount, catId: cat.id,
+    id: uid(), amount: amount, catId: cat.id, type: 'expense',
     note: note, date: date, createdAt: Date.now()
   });
   state.settings.balance = Math.round((state.settings.balance - amount) * 100) / 100;
@@ -425,6 +431,7 @@ function renderLog() {
   $('#logTotal').textContent = state.expenses.length ? state.expenses.length + ' 笔记录' : '';
   const now = new Date();
   const todayCycle = currentCycle();
+  renderAnalytics(todayCycle);
   const groups = [];
   for (let i = 0; i < logMonthCount; i++) {
     const base = cycleStartFor(now, state.settings.cycleStartDay);
@@ -437,27 +444,43 @@ function renderLog() {
     const items = state.expenses
       .filter(e => e.date >= key && e.date < endKey)
       .sort((a, b) => (a.date === b.date ? b.createdAt - a.createdAt : (a.date < b.date ? 1 : -1)));
+    const totals = items.reduce((sum, e) => {
+      const type = e.type || 'expense';
+      if (type === 'income') sum.income += e.amount;
+      else if (type === 'reduction') sum.reduction += e.amount;
+      else sum.expense += e.amount;
+      return sum;
+    }, { expense: 0, income: 0, reduction: 0 });
     groups.push({
       key: key,
       label: cycleRangeLabel(cycle),
       items: items,
-      sum: Math.round(items.reduce((s, e) => s + e.amount, 0) * 100) / 100
+      totals: totals
     });
   }
   box.innerHTML = groups.map(g => {
     const rows = g.items.length
       ? g.items.map(e => {
+        const type = e.type || 'expense';
         const c = catById(e.catId) || { emoji: '📦', color: '#8E8E93', name: '其他' };
+        const label = type === 'income' ? '生活费到账' : (type === 'reduction' ? '减少余额' : c.name);
+        const symbol = type === 'income' ? '+' : '−';
+        const amountClass = type === 'income' ? ' income' : (type === 'reduction' ? ' reduction' : ' expense');
+        const icon = type === 'income' ? '＋' : (type === 'reduction' ? '−' : c.emoji);
+        const iconColor = type === 'income' ? 'var(--green)' : (type === 'reduction' ? 'var(--orange)' : c.color);
         return '<div class="exp-row" data-id="' + esc(e.id) + '">' +
-          '<div class="exp-ico" style="background:' + esc(c.color) + '22">' + esc(c.emoji) + '</div>' +
-          '<div class="exp-mid"><div class="exp-name">' + esc(c.name) + '</div>' +
+          '<div class="exp-ico" style="background:color-mix(in srgb, ' + iconColor + ' 14%, transparent);color:' + iconColor + '">' + esc(icon) + '</div>' +
+          '<div class="exp-mid"><div class="exp-name">' + esc(label) + '</div>' +
           (e.note ? '<div class="exp-note">' + esc(e.note) + '</div>' : '') + '</div>' +
-          '<div class="exp-right"><div class="exp-amt">' + money(e.amount) + '</div>' +
+          '<div class="exp-right"><div class="exp-amt' + amountClass + '">' + symbol + money(e.amount) + '</div>' +
           '<div class="exp-date">' + e.date.slice(5).replace('-', '/') + '</div></div></div>';
       }).join('')
       : '<div class="empty-tip">' + (g.key === todayCycle.startKey ? '本期还没有记录' : '这个账期没有记录') + '</div>';
     return '<div class="month-group"><div class="month-head"><span>' + g.label + '</span>' +
-      '<span class="msum">' + g.items.length + ' 笔 · ' + money(g.sum) + '</span></div>' + rows + '</div>';
+      '<span class="msum">' + g.items.length + ' 笔</span></div>' +
+      (g.items.length ? '<div class="month-summary"><span>支出 ' + money(g.totals.expense) + '</span>' +
+        '<span>加钱 <b class="income">+' + money(g.totals.income) + '</b></span>' +
+        '<span>减钱 <b class="reduction">−' + money(g.totals.reduction) + '</b></span></div>' : '') + rows + '</div>';
   }).join('');
 
   const earliest = state.expenses.reduce((m, e) => (m === null || e.date < m ? e.date : m), null);
@@ -465,26 +488,78 @@ function renderLog() {
   $('#loadMoreMonths').classList.toggle('hidden', !(earliest && earliest < shown));
 }
 
+function renderAnalytics(cycle) {
+  const cycleLabel = cycleRangeLabel(cycle);
+  $('#analyticsPeriod').textContent = cycleLabel + ' · 当前账单周期';
+  const items = expensesInCycle(cycle);
+  const total = Math.round(items.reduce((sum, e) => sum + e.amount, 0) * 100) / 100;
+  $('#pieTotal').textContent = money(total);
+  const totals = {};
+  items.forEach(e => { totals[e.catId] = (totals[e.catId] || 0) + e.amount; });
+  const categories = Object.keys(totals).map(id => ({
+    category: catById(id) || { name: '其他', color: '#8E8E93', emoji: '📦' },
+    total: totals[id]
+  })).sort((a, b) => b.total - a.total);
+  const pie = $('#expensePie');
+  if (total > 0) {
+    let degree = 0;
+    const segments = categories.map(item => {
+      const end = degree + item.total / total * 360;
+      const segment = item.category.color + ' ' + degree.toFixed(2) + 'deg ' + end.toFixed(2) + 'deg';
+      degree = end;
+      return segment;
+    });
+    pie.style.background = 'conic-gradient(' + segments.join(',') + ')';
+    pie.setAttribute('aria-label', '本期支出分类占比，共 ' + money(total));
+  } else {
+    pie.style.background = 'conic-gradient(var(--line) 0deg 360deg)';
+    pie.setAttribute('aria-label', '本期暂无支出');
+  }
+  $('#pieLegend').innerHTML = categories.length ? categories.map(item => {
+    const pct = item.total / total * 100;
+    return '<div class="pie-legend-row"><span class="pie-dot" style="background:' + esc(item.category.color) + '"></span>' +
+      '<span class="pie-legend-name">' + esc(item.category.name) + '</span>' +
+      '<span class="pie-legend-value">' + pct.toFixed(pct < 10 ? 1 : 0) + '% · ' + money(item.total) + '</span></div>';
+  }).join('') : '<div class="analytics-empty">本账期还没有支出</div>';
+
+  const byDay = {};
+  items.forEach(e => { byDay[e.date] = (byDay[e.date] || 0) + e.amount; });
+  const days = Object.keys(byDay).sort().reverse();
+  const max = days.reduce((m, key) => Math.max(m, byDay[key]), 0);
+  $('#dailySpendCount').textContent = days.length ? days.length + ' 天有支出' : '';
+  $('#dailySpendList').innerHTML = days.length ? days.map(key => {
+    const date = new Date(key + 'T12:00:00');
+    const weekday = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
+    const label = key === todayStr() ? '今天' : ((date.getMonth() + 1) + '月' + date.getDate() + '日 周' + weekday);
+    const width = Math.max(4, byDay[key] / max * 100);
+    return '<div class="daily-spend-row"><span class="daily-date">' + label + '</span>' +
+      '<span class="daily-track"><i style="width:' + width.toFixed(1) + '%"></i></span>' +
+      '<strong class="daily-amount">' + money(byDay[key]) + '</strong></div>';
+  }).join('') : '<div class="analytics-empty">本账期还没有每日支出</div>';
+}
+
 /* ---------------- 记录：编辑 ---------------- */
 function openExpenseSheet(id) {
   const e = state.expenses.filter(x => x.id === id)[0];
   if (!e) return;
+  const type = e.type || 'expense';
+  const isExpense = type === 'expense';
   const cats = visibleCategories();
   const state_ = { catId: e.catId };
   openSheet(
     '<h2>编辑记录</h2>' +
     '<div class="field"><label>金额</label>' +
     '<input class="amount-lg" id="edAmount" type="number" inputmode="decimal" step="0.01" min="0.01" value="' + e.amount + '" /></div>' +
-    '<div class="field"><label>分类</label><div class="chips" id="edCats">' +
+    (isExpense ? '<div class="field"><label>分类</label><div class="chips" id="edCats">' +
     cats.map(c => '<button class="chip' + (c.id === e.catId ? ' on' : '') + '" data-cat="' + esc(c.id) + '">' +
       '<span class="ce">' + esc(c.emoji) + '</span>' + esc(c.name) + '</button>').join('') +
-    '</div></div>' +
+    '</div></div>' : '') +
     '<div class="field"><label>日期</label><input id="edDate" type="date" max="' + todayStr() + '" value="' + e.date + '" /></div>' +
     '<div class="field"><label>备注</label><input id="edNote" type="text" maxlength="30" value="' + esc(e.note) + '" /></div>' +
     '<div class="btn-row"><button class="btn-mini danger" id="edDel" style="padding:14px 16px">删除</button>' +
     '<button class="btn-primary" id="edSave">保存</button></div>'
   );
-  $('#edCats').addEventListener('click', ev => {
+  if (isExpense) $('#edCats').addEventListener('click', ev => {
     const b = ev.target.closest('.chip');
     if (!b) return;
     state_.catId = b.getAttribute('data-cat');
@@ -493,9 +568,9 @@ function openExpenseSheet(id) {
   $('#edSave').onclick = () => {
     const amt = parseAmountInput($('#edAmount').value);
     if (amt <= 0) { toast('请输入大于 0 的金额'); return; }
-    state.settings.balance = Math.round((state.settings.balance + e.amount - amt) * 100) / 100;
+    state.settings.balance = Math.round((state.settings.balance + balanceEffect({ type: type, amount: amt }) - balanceEffect(e)) * 100) / 100;
     e.amount = amt;
-    e.catId = state_.catId;
+    if (isExpense) e.catId = state_.catId;
     e.date = clampDate($('#edDate').value || e.date);
     e.note = $('#edNote').value.trim().slice(0, 30);
     save();
@@ -511,7 +586,7 @@ function openExpenseSheet(id) {
     }).then(ok => {
       if (!ok) return;
       state.expenses = state.expenses.filter(x => x.id !== e.id);
-      state.settings.balance = Math.round((state.settings.balance + e.amount) * 100) / 100;
+      state.settings.balance = Math.round((state.settings.balance - balanceEffect(e)) * 100) / 100;
       save();
       closeSheet();
       renderAll();
@@ -853,8 +928,10 @@ function applyImport(text, mode) {
       incoming.settings.categories.forEach(c => {
         if (!existingCats[c.id]) state.settings.categories.push(c);
       });
-      incoming.expenses.forEach(e => { if (!have[e.id]) state.expenses.push(e); });
+      const added = incoming.expenses.filter(e => !have[e.id]);
+      added.forEach(e => state.expenses.push(e));
       if (useIncomingBalance) state.settings.balance = incoming.settings.balance;
+      else state.settings.balance = Math.round((state.settings.balance + added.reduce((sum, e) => sum + balanceEffect(e), 0)) * 100) / 100;
     }
     save();
     logMonthCount = 1;
@@ -973,11 +1050,19 @@ function bind() {
       toast('减少金额不能超过当前余额');
       return;
     }
-    state.settings.balance = Math.round((current + (balanceAdjustMode === 'add' ? amount : -amount)) * 100) / 100;
+    const type = balanceAdjustMode === 'add' ? 'income' : 'reduction';
+    const entry = {
+      id: uid(), amount: amount, catId: 'other', type: type,
+      note: '',
+      date: todayStr(), createdAt: Date.now()
+    };
+    state.expenses.push(entry);
+    state.settings.balance = Math.round((current + balanceEffect(entry)) * 100) / 100;
     save();
     $('#balanceAdjustAmount').value = '';
     renderBudget();
     renderSettings();
+    renderLog();
     toast((balanceAdjustMode === 'add' ? '已添加生活费 ' : '已减少余额 ') + money(amount) + '，当前余额 ' + money(state.settings.balance));
   });
   $('#setCycle').addEventListener('change', () => {

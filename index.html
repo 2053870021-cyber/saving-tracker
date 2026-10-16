@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>省钱记</title>
-<meta name="description" content="快速记账，实时警示，帮你省钱" />
+<meta name="description" content="快速记账，手动管理余额，按账单周期分析每日支出" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -86,6 +86,23 @@
       <h1>记录</h1>
       <span id="logTotal" class="muted-sm"></span>
     </header>
+    <section class="log-analytics" aria-label="本期支出分析">
+      <div class="analytics-head">
+        <h2>分类支出</h2>
+        <span id="analyticsPeriod" class="muted-sm"></span>
+      </div>
+      <div class="pie-overview">
+        <div id="expensePie" class="pie-chart" role="img" aria-label="本期暂无支出">
+          <div class="pie-core"><strong id="pieTotal">¥0.00</strong><span>周期支出</span></div>
+        </div>
+        <div id="pieLegend" class="pie-legend"></div>
+      </div>
+      <div class="daily-head">
+        <div><h2>每天花费</h2><p>只显示有支出的日期</p></div>
+        <span id="dailySpendCount" class="muted-sm"></span>
+      </div>
+      <div id="dailySpendList" class="daily-spend-list"></div>
+    </section>
     <div id="logList" class="log-list"></div>
     <button id="loadMoreMonths" class="ghost-btn hidden">显示更早的月份</button>
     <div class="spacer"></div>
