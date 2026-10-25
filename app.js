@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.8';
+const APP_VERSION = '1.0.9';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -326,6 +326,9 @@ function renderBudget() {
   $('#bcSpent').textContent = money(spent);
   $('#bcCycleStart').textContent = cy.startKey.slice(5).replace('-', '/');
   $('#bcDays').textContent = cy.daysLeft + ' 天';
+  $('#bcDailyLabel').textContent = balance < 0 ? '余额不足' : '平均每天可花';
+  $('#bcDaily').textContent = money(Math.max(0, balance) / cy.daysLeft);
+  $('#bcDaily').className = 'v' + (balance < 0 ? ' over' : ' ok');
 
   const hint = $('#bcHint');
   const staleDays = state.settings.lastBackupAt
@@ -336,7 +339,8 @@ function renderBudget() {
     ? (staleDays === null ? '还没有导出过备份，建议去设置里导出一份。' : '已经 ' + staleDays + ' 天没备份了，建议导出一次。')
     : '';
   hint.className = 'bc-hint';
-  hint.textContent = '账单周期：' + cy.startKey + ' 至 ' + endDate + '。余额会跨周期结转。' +
+  hint.textContent = '平均每天可花按当前余额 ÷ 本期剩余天数估算。账单周期：' + cy.startKey + ' 至 ' + endDate + '。余额会跨周期结转。' +
+    (balance < 0 ? ' 当前已超出余额 ' + money(Math.abs(balance)) + '。' : '') +
     (backupHint ? ' ' + backupHint : '');
 }
 
