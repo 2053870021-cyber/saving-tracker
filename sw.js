@@ -1,5 +1,6 @@
 /* 省钱记 Service Worker — 网络优先 + 缓存兜底，离线可用 */
-const CACHE = 'savetracker-v1.0.9';
+const CACHE = 'savetracker-v1.0.10';
+const GROWTH_SPACE_PATH = new URL('./growth-space/', self.registration.scope).pathname;
 const ASSETS = [
   './',
   './index.html',
@@ -34,6 +35,7 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith(GROWTH_SPACE_PATH)) return;
 
   event.respondWith(
     fetch(req)
@@ -51,4 +53,3 @@ self.addEventListener('fetch', event => {
       }))
   );
 });
-
