@@ -984,6 +984,11 @@ function setTab(name) {
   $('#view-growth').classList.toggle('hidden', name !== 'growth');
   $('#view-settings').classList.toggle('hidden', name !== 'settings');
   $('#main').classList.toggle('growth-mode', name === 'growth');
+  if (['add', 'log', 'growth', 'settings'].indexOf(name) >= 0) {
+    const url = new URL(location.href);
+    url.hash = name === 'growth' ? '#growth' : '';
+    history.replaceState(null, '', url);
+  }
   window.scrollTo(0, 0);
 }
 
@@ -1210,6 +1215,8 @@ function registerSW() {
 load();
 bind();
 renderAll();
+const initialTab = location.hash.slice(1);
+if (['add', 'log', 'growth', 'settings'].indexOf(initialTab) >= 0) setTab(initialTab);
 registerSW();
 
 document.addEventListener('visibilitychange', () => {
