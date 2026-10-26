@@ -177,11 +177,24 @@
     <div class="spacer"></div>
   </section>
 
+  <!-- ============ 成长手记 ============ -->
+  <section id="view-growth" class="view growth-view hidden">
+    <header class="page-head growth-head">
+      <div><h1>成长手记</h1><p class="muted-sm">记下今天的快乐、烦恼和一点思考。</p></div>
+    </header>
+    <div class="growth-switch" role="group" aria-label="成长手记页面">
+      <button class="growth-switch-btn active" type="button" data-growth-page="write" aria-pressed="true">写日记</button>
+      <button class="growth-switch-btn" type="button" data-growth-page="records" aria-pressed="false">看记录</button>
+    </div>
+    <iframe id="growthFrame" title="成长手记" src="./growth-space/?embedded=1#write"></iframe>
+  </section>
+
 </main>
 
 <nav class="tabbar" id="tabbar">
   <button class="tab active" data-view="add"><span class="ti">✏️</span>记一笔</button>
   <button class="tab" data-view="log"><span class="ti">📋</span>记录</button>
+  <button class="tab" data-view="growth"><span class="ti">🌱</span>成长</button>
   <button class="tab" data-view="settings"><span class="ti">⚙️</span>设置</button>
 </nav>
 
