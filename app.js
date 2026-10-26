@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.0.9';
+const APP_VERSION = '1.1.0';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -981,7 +981,9 @@ function setTab(name) {
   $$('#tabbar .tab').forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === name));
   $('#view-add').classList.toggle('hidden', name !== 'add');
   $('#view-log').classList.toggle('hidden', name !== 'log');
+  $('#view-growth').classList.toggle('hidden', name !== 'growth');
   $('#view-settings').classList.toggle('hidden', name !== 'settings');
+  $('#main').classList.toggle('growth-mode', name === 'growth');
   window.scrollTo(0, 0);
 }
 
@@ -1025,6 +1027,28 @@ function bind() {
     const b = ev.target.closest('.tab');
     if (b) setTab(b.getAttribute('data-view'));
   });
+
+  const growthFrame = $('#growthFrame');
+  let growthPage = 'write';
+  function syncGrowthSwitch() {
+    try { growthPage = growthFrame.contentWindow.location.hash === '#records' ? 'records' : 'write'; } catch (_) {}
+    $$('.growth-switch-btn').forEach(b => {
+      const active = b.getAttribute('data-growth-page') === growthPage;
+      b.classList.toggle('active', active);
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+  function attachGrowthFrame() {
+    try { growthFrame.contentWindow.addEventListener('hashchange', syncGrowthSwitch); } catch (_) {}
+    syncGrowthSwitch();
+  }
+  growthFrame.addEventListener('load', attachGrowthFrame);
+  attachGrowthFrame();
+  $$('.growth-switch-btn').forEach(b => b.addEventListener('click', () => {
+    growthPage = b.getAttribute('data-growth-page');
+    growthFrame.contentWindow.location.hash = '#' + growthPage;
+    syncGrowthSwitch();
+  }));
 
   $('#logList').addEventListener('click', ev => {
     const row = ev.target.closest('.exp-row');
