@@ -137,45 +137,6 @@
   $('returnToday').addEventListener('click', () => { rememberDraft(); selectedDate = today; shownMonth = new Date(now.getFullYear(), now.getMonth(), 1); renderSelectedDay(); renderCalendar(); });
   let timer;
   function toast(message) { const el = $('toast'); el.textContent = message; el.classList.add('show'); clearTimeout(timer); timer = setTimeout(() => el.classList.remove('show'), 3200); }
-  async function exportNotes() {
-    rememberDraft();
-    const keys = [...new Set([...savedKeys(), ...drafts.keys()])].sort().reverse();
-    if (!keys.length) { toast('还没有可导出的记录，保存一条后就能备份。'); return; }
-    const entries = keys.map(key => {
-      const draft = drafts.get(key), record = draft || state.dailyRecords[key] || {};
-      const values = [
-        ['快乐的事情', record.happy || ''],
-        ['不快乐的事情', record.unhappy || ''],
-        ['对于今天的思考', record.thoughts || ''],
-        ['当天注释', draft ? (draft.note || '') : (state.calendarNotes[key] || '')]
-      ].map(([label, value]) => [label, String(value || '').trim()]).filter(([, value]) => value);
-      return values.length ? { key, values } : null;
-    }).filter(Boolean);
-    const sections = entries.map(({ key, values }) => '## ' + prettyDate(key) + '\n\n' + values.map(([label, value]) => '### ' + label + '\n\n' + value).join('\n\n'));
-    const markdown = '# 留一页给自己｜日记备份\n\n导出于 ' + prettyDate(today) + '\n\n' + sections.join('\n\n---\n\n') + '\n';
-    const shareText = '留一页给自己｜成长记录\n导出于 ' + prettyDate(today) + '\n\n' + entries.map(({ key, values }) => prettyDate(key) + '\n' + values.map(([label, value]) => label + '\n' + value).join('\n\n')).join('\n\n──────────\n\n');
-    const filename = '留一页给自己-备忘录备份-' + today + '.md';
-    const file = new File(['\ufeff', markdown], filename, { type: 'text/markdown;charset=utf-8' });
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: '留一页给自己｜成长记录', text: shareText });
-        toast('已打开分享菜单，选择「备忘录」即可保存全部记录。');
-        return;
-      } catch (error) {
-        if (error.name === 'AbortError') return;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareText);
-      toast('已复制全部记录，打开备忘录后粘贴即可。');
-      return;
-    } catch (error) { /* 继续提供文件下载 */ }
-    const url = URL.createObjectURL(file), link = document.createElement('a');
-    link.href = url; link.download = filename;
-    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast('备忘录文件已下载，可导入 Apple 备忘录。');
-  }
-  $('exportNotes').addEventListener('click', exportNotes);
   function parseArchiveMarkdown(markdown) {
     const clean = markdown.replace(/^\uFEFF/, '').replace(/\r/g, '');
     if (!clean.startsWith('# 留一页给自己｜日记备份')) return null;
