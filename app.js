@@ -892,6 +892,87 @@ function fallbackCopy(text, done) {
   try { document.execCommand('copy'); done(); } catch (e) { toast('请手动长按全选复制'); }
 }
 
+
+function notesDate(dateKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ''))) return String(dateKey || '日期未知');
+  return new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+    .format(new Date(dateKey + 'T12:00:00'));
+}
+
+function allRecordsForNotes() {
+  const expenseLines = state.expenses.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || Number(b.createdAt || 0) - Number(a.createdAt || 0)).map(entry => {
+    const type = entry.type || 'expense';
+    const label = type === 'income' ? '生活费' : type === 'reduction' ? '减少余额' : '支出';
+    const category = type === 'expense' ? catById(entry.catId) : null;
+    return [notesDate(entry.date), label, category ? category.name : '', money(entry.amount), entry.note ? '备注：' + entry.note : '']
+      .filter(Boolean).join(' · ');
+  });
+
+  let journal = {};
+  try { journal = JSON.parse(localStorage.getItem('xiangqianyidian-v1') || '{}') || {}; } catch (e) { journal = {}; }
+  const dailyRecords = journal.dailyRecords && typeof journal.dailyRecords === 'object' ? journal.dailyRecords : {};
+  if (!Object.keys(dailyRecords).length && Array.isArray(journal.entries)) {
+    journal.entries.forEach(entry => {
+      const match = String(entry.date || '').match(/(\d{1,2})月(\d{1,2})日/);
+      if (!match) return;
+      const key = new Date().getFullYear() + '-' + pad2(Number(match[1])) + '-' + pad2(Number(match[2]));
+      dailyRecords[key] = { happy: '', unhappy: '', thoughts: entry.text || '' };
+    });
+  }
+  const calendarNotes = journal.calendarNotes && typeof journal.calendarNotes === 'object' ? journal.calendarNotes : {};
+  const keys = [...new Set([...Object.keys(dailyRecords), ...Object.keys(calendarNotes)])]
+    .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key))
+    .sort((a, b) => b.localeCompare(a));
+  const diarySections = keys.map(key => {
+    const record = dailyRecords[key] || {}, note = calendarNotes[key] || '';
+    const parts = [
+      record.happy ? '快乐的事情\n' + record.happy : '',
+      record.unhappy ? '不快乐的事情\n' + record.unhappy : '',
+      record.thoughts ? '对于今天的思考\n' + record.thoughts : '',
+      note ? '当天注释\n' + note : ''
+    ].filter(Boolean);
+    return parts.length ? notesDate(key) + '\n' + parts.join('\n\n') : '';
+  }).filter(Boolean);
+  const date = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date());
+  const text = [
+    '省钱记｜全部记录',
+    '导出于 ' + date,
+    '',
+    '省钱流水（' + expenseLines.length + ' 笔）',
+    expenseLines.length ? expenseLines.join('\n') : '暂无省钱记录',
+    '',
+    '成长手记（' + diarySections.length + ' 天）',
+    diarySections.length ? diarySections.join('\n\n──────────\n\n') : '暂无成长手记'
+  ].join('\n');
+  return { text, count: expenseLines.length + diarySections.length };
+}
+
+async function exportAllToNotes() {
+  const exported = allRecordsForNotes();
+  if (!exported.count) { toast('还没有可导出的记录。'); return; }
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: '省钱记｜全部记录', text: exported.text });
+      toast('已打开分享菜单，选择「备忘录」保存全部记录。');
+      return;
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(exported.text);
+    toast('已复制全部记录，打开备忘录后粘贴即可。');
+    return;
+  } catch (error) { /* 继续提供文本文件下载 */ }
+  const blob = new Blob(['\ufeff', exported.text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob), link = document.createElement('a');
+  link.href = url;
+  link.download = '省钱记-全部记录-' + todayStr() + '.txt';
+  document.body.appendChild(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  toast('全部记录已下载为文本文件。');
+}
+
 function parseBackup(text) {
   let obj;
   try { obj = JSON.parse(text); } catch (e) { throw new Error('不是合法的 JSON 文本'); }
@@ -1129,6 +1210,7 @@ function bind() {
   initCatDrag();
 
   /* 数据 */
+  $('#exportNotesBtn').onclick = exportAllToNotes;
   $('#exportBtn').onclick = doExport;
   $('#copyBtn').onclick = doCopy;
   $('#pasteToggle').onclick = () => $('#pasteArea').classList.toggle('hidden');
