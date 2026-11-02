@@ -76,6 +76,7 @@
     return '<path d="M' + (x - 11) + ' ' + (y + 2) + ' Q' + (x - 12) + ' ' + (y + 21) + ' ' + (x - 9) + ' ' + (y + 29) + ' L' + (x + 10) + ' ' + (y + 29) + ' Q' + (x + 13) + ' ' + (y + 16) + ' ' + (x + 11) + ' ' + (y + 2) + 'Z" fill="#e9d2a5" stroke="#9b7950" stroke-width="1.5"/>' + cap + '<path d="M' + (x - 8) + ' ' + (y - 5) + ' q3 -3 6 0 M' + (x + 2) + ' ' + (y - 5) + ' q3 -3 6 0" fill="none" stroke="#352b3d" stroke-width="1.7" stroke-linecap="round"/><circle cx="' + (x - 5) + '" cy="' + (y - 2) + '" r="1.5" fill="#352b3d"/><circle cx="' + (x + 5) + '" cy="' + (y - 2) + '" r="1.5" fill="#352b3d"/><path d="M' + (x - 3) + ' ' + (y + 6) + ' Q' + x + ' ' + (y + 9) + ' ' + (x + 3) + ' ' + (y + 6) + '" fill="none" stroke="#704050" stroke-width="1.5" stroke-linecap="round"/><circle cx="' + (x - 15) + '" cy="' + (y - 1) + '" r="3" fill="#ead6ed"/><circle cx="' + (x + 15) + '" cy="' + (y - 1) + '" r="3" fill="#ead6ed"/>';
   }
   function plantSvg(type, upgraded) {
+    if (type === 'mushroom') return '<img class="mushroom-art" src="./assets/' + (upgraded ? 'fume-shroom.png' : 'puff-shroom.png') + '" alt="" aria-hidden="true" width="120" height="130">';
     const heads = type === 'sun'
       ? upgraded ? plantHead(43, 39, 'sun', true) + plantHead(78, 39, 'sun', true) : plantHead(60, 42, 'sun', false)
       : plantHead(60, upgraded ? 39 : 42, 'mushroom', upgraded);
@@ -242,4 +243,3 @@
   window.addEventListener('hashchange', () => renderPage(true));
   renderSelectedDay(); renderCalendar(); renderInspiration(); renderGarden(); renderPage();
 })();
-
