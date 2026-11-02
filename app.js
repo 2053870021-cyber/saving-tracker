@@ -4,7 +4,7 @@
    省钱记 — 纯本地 PWA，无后端、无依赖
    ============================================================ */
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const STORAGE_KEY = 'savetracker.v1';
 const BACKUP_STALE_DAYS = 30;
 const MAX_AMOUNT = 9999999;
@@ -832,13 +832,37 @@ function persistCategoryOrder() {
 }
 
 /* ---------------- 数据：导出 / 导入 / 清空 ---------------- */
+function readJournalBackup(value) {
+  let source = value;
+  if (arguments.length === 0) source = JSON.parse(localStorage.getItem('xiangqianyidian-v1') || '{}');
+  const journal = { dailyRecords: {}, calendarNotes: {} };
+  if (!source || typeof source !== 'object') return journal;
+  if (!source.dailyRecords && Array.isArray(source.entries)) {
+    source = { ...source, dailyRecords: {} };
+    source.entries.forEach(entry => {
+      const match = String(entry.date || '').match(/(\d{1,2})月(\d{1,2})日/);
+      if (match) source.dailyRecords[new Date().getFullYear() + '-' + pad2(Number(match[1])) + '-' + pad2(Number(match[2]))] = { thoughts: entry.text || '' };
+    });
+  }
+  for (const key of Object.keys(source.dailyRecords || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) continue;
+    const record = source.dailyRecords[key] || {};
+    journal.dailyRecords[key] = { happy: String(record.happy || ''), unhappy: String(record.unhappy || ''), thoughts: String(record.thoughts || '') };
+  }
+  for (const key of Object.keys(source.calendarNotes || {})) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(key)) journal.calendarNotes[key] = String(source.calendarNotes[key] || '');
+  }
+  return journal;
+}
+
 function exportPayload() {
   return JSON.stringify({
     app: '省钱记',
     version: 1,
     exportedAt: new Date().toISOString(),
     settings: state.settings,
-    expenses: state.expenses
+    expenses: state.expenses,
+    journal: readJournalBackup()
   }, null, 2);
 }
 
@@ -856,8 +880,8 @@ function markBackedUp() {
 }
 
 function doExport() {
-  const text = exportPayload();
   try {
+    const text = exportPayload();
     const blob = new Blob([text], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -868,14 +892,15 @@ function doExport() {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 4000);
     markBackedUp();
-    toast('已导出 ' + state.expenses.length + ' 笔记录');
+    toast('账单与成长手记已导出');
   } catch (err) {
     toast('导出失败，请改用「复制备份到剪贴板」');
   }
 }
 
 function doCopy() {
-  const text = exportPayload();
+  let text;
+  try { text = exportPayload(); } catch (error) { toast('成长手记读取失败，请先保留现有数据后重试'); return; }
   const done = () => { markBackedUp(); toast('备份已复制到剪贴板'); };
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
@@ -883,15 +908,6 @@ function doCopy() {
     fallbackCopy(text, done);
   }
 }
-
-function fallbackCopy(text, done) {
-  $('#pasteArea').classList.remove('hidden');
-  const ta = $('#pasteText');
-  ta.value = text;
-  ta.select();
-  try { document.execCommand('copy'); done(); } catch (e) { toast('请手动长按全选复制'); }
-}
-
 
 function notesDate(dateKey) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ''))) return String(dateKey || '日期未知');
@@ -973,13 +989,23 @@ async function exportAllToNotes() {
   toast('全部记录已下载为文本文件。');
 }
 
+function fallbackCopy(text, done) {
+  $('#pasteArea').classList.remove('hidden');
+  const ta = $('#pasteText');
+  ta.value = text;
+  ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { toast('请手动长按全选复制'); }
+}
+
 function parseBackup(text) {
   let obj;
   try { obj = JSON.parse(text); } catch (e) { throw new Error('不是合法的 JSON 文本'); }
   if (!obj || typeof obj !== 'object') throw new Error('内容不是对象');
   if (Number(obj.version) > 1) throw new Error('备份来自更新版本（v' + obj.version + '）');
   if (!Array.isArray(obj.expenses)) throw new Error('缺少 expenses 数组');
-  return normalizeState(obj);
+  const normalized = normalizeState(obj);
+  if (Object.prototype.hasOwnProperty.call(obj, 'journal')) normalized.journal = readJournalBackup(obj.journal);
+  return normalized;
 }
 
 function applyImport(text, mode) {
@@ -988,7 +1014,8 @@ function applyImport(text, mode) {
     alertModal('导入失败', esc(err.message) + '<br>请确认选择的是「省钱记」导出的备份文件。', '好');
     return;
   }
-  if (!incoming.expenses.length) {
+  const journalDays = incoming.journal ? new Set([...Object.keys(incoming.journal.dailyRecords), ...Object.keys(incoming.journal.calendarNotes)]).size : 0;
+  if (!incoming.expenses.length && !journalDays) {
     alertModal('导入失败', '备份里没有任何记录。', '好');
     return;
   }
@@ -996,12 +1023,23 @@ function applyImport(text, mode) {
   confirmModal({
     title: mode === 'replace' ? '替换全部数据？' : '合并数据？',
     body: mode === 'replace'
-      ? '将用备份里的 <b>' + n + '</b> 笔记录<b>替换</b>当前全部数据，当前数据会被清掉。'
-      : '将把备份里的 <b>' + n + '</b> 笔记录合并进来（相同 id 的记录会跳过）。',
+      ? '将替换为备份中的 <b>' + n + '</b> 笔账单' + (incoming.journal ? '与 <b>' + journalDays + '</b> 天成长手记' : '；此旧版备份不包含成长手记，现有手记将保留') + '。建议先导出当前完整备份。'
+      : '将合并 <b>' + n + '</b> 笔账单、<b>' + journalDays + '</b> 天成长手记；重复账单跳过，同日手记保留本机已有内容。',
     okText: mode === 'replace' ? '替换' : '合并',
     danger: mode === 'replace'
   }).then(ok => {
     if (!ok) return;
+    if (incoming.journal) {
+      try {
+        const current = mode === 'replace' ? { dailyRecords: {}, calendarNotes: {} } : readJournalBackup();
+        const journal = {
+          dailyRecords: { ...incoming.journal.dailyRecords, ...current.dailyRecords },
+          calendarNotes: { ...incoming.journal.calendarNotes, ...current.calendarNotes }
+        };
+        localStorage.setItem('xiangqianyidian-v1', JSON.stringify(journal));
+        if (mode === 'replace') localStorage.removeItem('xiangqianyidian-drafts-v1');
+      } catch (error) { toast('手记写入失败，导入已停止，请检查存储空间'); return; }
+    }
     if (mode === 'replace') {
       state = incoming;
     } else {
@@ -1021,6 +1059,7 @@ function applyImport(text, mode) {
     save();
     logMonthCount = 1;
     renderAll();
+    if (incoming.journal && $('#growthFrame').getAttribute('src')) $('#growthFrame').contentWindow.location.reload();
     toast('导入完成，共 ' + state.expenses.length + ' 笔记录');
   });
 }
@@ -1059,7 +1098,18 @@ function doClear() {
 
 /* ---------------- 视图切换 ---------------- */
 function setTab(name) {
+  if (['add', 'log', 'growth', 'settings'].indexOf(name) < 0) return;
+  if (name === 'growth') {
+    let theme = 'day';
+    try { theme = localStorage.getItem('xiangqianyidian-garden-mode-v1') === 'night' ? 'night' : 'day'; } catch (e) {}
+    document.documentElement.dataset.growthTheme = theme;
+  } else delete document.documentElement.dataset.growthTheme;
+  if (name === 'growth') {
+    const frame = $('#growthFrame');
+    if (!frame.getAttribute('src')) frame.src = frame.dataset.src;
+  }
   $$('#tabbar .tab').forEach(b => b.classList.toggle('active', b.getAttribute('data-view') === name));
+  $$('#tabbar .tab').forEach(b => { if (b.getAttribute('data-view') === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   $('#view-add').classList.toggle('hidden', name !== 'add');
   $('#view-log').classList.toggle('hidden', name !== 'log');
   $('#view-growth').classList.toggle('hidden', name !== 'growth');
@@ -1067,7 +1117,7 @@ function setTab(name) {
   $('#main').classList.toggle('growth-mode', name === 'growth');
   if (['add', 'log', 'growth', 'settings'].indexOf(name) >= 0) {
     const url = new URL(location.href);
-    url.hash = name === 'growth' ? '#growth' : '';
+    url.hash = name === 'add' ? '' : '#' + name;
     history.replaceState(null, '', url);
   }
   window.scrollTo(0, 0);
@@ -1115,9 +1165,15 @@ function bind() {
   });
 
   const growthFrame = $('#growthFrame');
+  window.addEventListener('message', event => {
+    if (event.origin !== location.origin || event.source !== growthFrame.contentWindow || event.data?.type !== 'growth-theme') return;
+    if (!['day', 'night'].includes(event.data.theme)) return;
+    if ($('#main').classList.contains('growth-mode')) document.documentElement.dataset.growthTheme = event.data.theme;
+  });
   let growthPage = 'write';
+  let growthReady = false;
   function syncGrowthSwitch() {
-    try { growthPage = growthFrame.contentWindow.location.hash === '#records' ? 'records' : 'write'; } catch (_) {}
+    if (growthReady) { try { growthPage = growthFrame.contentWindow.location.hash === '#records' ? 'records' : 'write'; } catch (_) {} }
     $$('.growth-switch-btn').forEach(b => {
       const active = b.getAttribute('data-growth-page') === growthPage;
       b.classList.toggle('active', active);
@@ -1125,6 +1181,9 @@ function bind() {
     });
   }
   function attachGrowthFrame() {
+    if (!growthFrame.getAttribute('src')) return;
+    growthReady = true;
+    growthFrame.contentWindow.location.hash = '#' + growthPage;
     try { growthFrame.contentWindow.addEventListener('hashchange', syncGrowthSwitch); } catch (_) {}
     syncGrowthSwitch();
   }
@@ -1132,7 +1191,7 @@ function bind() {
   attachGrowthFrame();
   $$('.growth-switch-btn').forEach(b => b.addEventListener('click', () => {
     growthPage = b.getAttribute('data-growth-page');
-    growthFrame.contentWindow.location.hash = '#' + growthPage;
+    if (growthReady) growthFrame.contentWindow.location.hash = '#' + growthPage;
     syncGrowthSwitch();
   }));
 
@@ -1298,7 +1357,7 @@ load();
 bind();
 renderAll();
 const initialTab = location.hash.slice(1);
-if (['add', 'log', 'growth', 'settings'].indexOf(initialTab) >= 0) setTab(initialTab);
+setTab(['add', 'log', 'growth', 'settings'].includes(initialTab) ? initialTab : 'add');
 registerSW();
 
 document.addEventListener('visibilitychange', () => {

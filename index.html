@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>省钱记</title>
 <meta name="description" content="快速记账，手动管理余额，按账单周期分析每日支出" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -72,8 +72,8 @@
     <div class="chips" id="catChips"></div>
 
     <div class="meta-row">
-      <input id="dateInput" type="date" class="meta-input" />
-      <input id="noteInput" type="text" class="meta-input note" maxlength="30" placeholder="备注（可选）" />
+      <input id="dateInput" type="date" class="meta-input" aria-label="记账日期" />
+      <input id="noteInput" type="text" class="meta-input note" maxlength="30" placeholder="备注（可选）" aria-label="记账备注" />
     </div>
 
     <div class="keypad" id="keypad"></div>
@@ -154,7 +154,7 @@
       <div id="backupHint" class="hint warn hidden"></div>
       <button id="exportNotesBtn" class="ghost-btn" type="button">导出全部记录到备忘录</button>
       <p class="hint">包含省钱流水、成长手记和日历注释。点分享菜单中的「备忘录」即可保存。</p>
-      <button id="exportBtn" class="ghost-btn">导出备份（下载 JSON）</button>
+      <button id="exportBtn" class="ghost-btn">下载完整备份（账单＋成长手记）</button>
       <button id="copyBtn" class="ghost-btn">复制备份到剪贴板</button>
       <button id="importFileBtn" class="ghost-btn">从文件导入</button>
       <input id="importFile" type="file" accept="application/json,.json" class="hidden" />
@@ -188,7 +188,7 @@
       <button class="growth-switch-btn active" type="button" data-growth-page="write" aria-pressed="true">写日记</button>
       <button class="growth-switch-btn" type="button" data-growth-page="records" aria-pressed="false">看记录</button>
     </div>
-    <iframe id="growthFrame" title="成长手记" src="./growth-space/?embedded=1#write" allow="web-share"></iframe>
+    <iframe id="growthFrame" title="成长手记" data-src="./growth-space/?embedded=1#write" allow="web-share"></iframe>
   </section>
 
 </main>

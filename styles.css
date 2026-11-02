@@ -521,4 +521,7 @@ select#setCycle {
   animation: up .2s ease-out;
 }
 @media (prefers-color-scheme: dark) { .toast { background: rgba(255, 255, 255, .9); color: #000; } }
+/* Keep the journal shell in the same day/night palette as its content. */
+:root[data-growth-theme="day"] { color-scheme: light; --bg: #f2f2f7; --card: #fff; --text: #1c1c1e; --text-2: #626269; --text-3: #73737b; --line: rgba(60,60,67,.15); --green: #34c759; --green-deep: #248a3d; --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.05); }
+:root[data-growth-theme="night"] { color-scheme: dark; --bg: #141820; --card: #202630; --text: #f2f2f7; --text-2: #c0c4ce; --text-3: #a6acb8; --line: rgba(180,190,210,.2); --green: #a7d39a; --green-deep: #a7d39a; --shadow: none; }
 

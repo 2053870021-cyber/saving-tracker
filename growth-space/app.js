@@ -19,7 +19,9 @@
   const GARDEN_MODE_KEY = 'xiangqianyidian-garden-mode-v1';
   let gardenMode = 'day';
   try { gardenMode = localStorage.getItem(GARDEN_MODE_KEY) === 'night' ? 'night' : 'day'; } catch (e) { /* 使用白天模式 */ }
-  const drafts = new Map();
+  const DRAFT_KEY = 'xiangqianyidian-drafts-v1';
+  let drafts = new Map();
+  try { drafts = new Map(JSON.parse(localStorage.getItem(DRAFT_KEY) || '[]').filter(([key, value]) => /^\d{4}-\d{2}-\d{2}$/.test(key) && value && typeof value === 'object')); } catch (e) { drafts = new Map(); }
   const recordInputs = ['happyInput', 'unhappyInput', 'thoughtInput'];
   const readRecord = () => ({ happy: $('happyInput').value.trim(), unhappy: $('unhappyInput').value.trim(), thoughts: $('thoughtInput').value.trim() });
   function persist() {
@@ -31,7 +33,14 @@
   }
   function hasRecord(key) { const r = state.dailyRecords[key]; return !!(r && (r.happy || r.unhappy || r.thoughts)); }
   function savedKeys() { return [...new Set([...Object.keys(state.dailyRecords), ...Object.keys(state.calendarNotes)])].filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key) && (hasRecord(key) || state.calendarNotes[key])).sort().reverse(); }
-  function rememberDraft() { drafts.set(selectedDate, { ...readRecord(), note: $('calendarNoteInput').value }); }
+  function rememberDraft() {
+    const draft = { ...readRecord(), note: $('calendarNoteInput').value };
+    const saved = state.dailyRecords[selectedDate] || {};
+    if (['happy', 'unhappy', 'thoughts'].every(field => (draft[field] || '') === (saved[field] || '')) && draft.note === (state.calendarNotes[selectedDate] || '')) drafts.delete(selectedDate);
+    else drafts.set(selectedDate, draft);
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify([...drafts])); return true; }
+    catch (e) { $('saveHint').textContent = '草稿保存失败，请先复制文字'; return false; }
+  }
   function updateWritingState() {
     const count = recordInputs.filter(id => $(id).value.trim()).length;
     $('writingStatus').textContent = count === 0 ? '一句话也可以，只写一项也可以。' : count === 3 ? '三件事，都有了着落。' : '已经写下 ' + count + ' 件小事，不必凑满。';
@@ -47,6 +56,7 @@
     $('calendarDateLabel').textContent = prettyDate(selectedDate, false);
     $('calendarNoteInput').value = drafts.has(selectedDate) ? r.note || '' : state.calendarNotes[selectedDate] || '';
     $('saveHint').textContent = hasRecord(selectedDate) ? '这一页，已经替你留好了。' : '写下后，记得把这一天留住。';
+    if (drafts.has(selectedDate)) $('saveHint').textContent = '已恢复本机草稿，写完后记得留住这一天。';
     updateWritingState();
   }
   function renderCalendar(focusDate = '') {
@@ -81,12 +91,17 @@
     $('gardenSeedling').style.width = gardenMode === 'night' ? '48px' : '78px';
     $('garden').classList.toggle('night-mode', gardenMode === 'night');
     document.documentElement.dataset.gardenTheme = gardenMode;
+    if (window.parent && window.parent !== window) window.parent.postMessage({ type: 'growth-theme', theme: gardenMode }, location.origin);
     const modeButton = $('gardenModeToggle');
     modeButton.setAttribute('aria-pressed', gardenMode === 'night' ? 'true' : 'false');
     modeButton.setAttribute('aria-label', gardenMode === 'day' ? '切换到夜晚，显示小喷菇' : '切换到白天，显示向日葵');
     modeButton.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#' + (gardenMode === 'day' ? 'i-moon' : 'i-sun') + '"/></svg><span>' + (gardenMode === 'day' ? '夜晚' : '白天') + '</span>';
     const groups = [];
-    for (let i = 0; i < keys.length; i += 5) groups.push(keys.slice(i, i + 5));
+    const chronological = keys.slice().reverse();
+    let groupIndex = 0;
+    for (; groupIndex + 5 <= chronological.length; groupIndex += 5) groups.push(chronological.slice(groupIndex, groupIndex + 5).reverse());
+    for (; groupIndex < chronological.length; groupIndex++) groups.push([chronological[groupIndex]]);
+    groups.reverse();
     $('gardenMore').textContent = groups.length > 9 ? '最近 9 株 · 共 ' + groups.length + ' 株；每株代表最多 5 天' : '点一株植物，回看最近一天的记录';
     $('gardenMore').hidden = keys.length === 0;
     const positions = [50, 25, 72, 39, 85, 12, 60, 32, 77];
@@ -131,7 +146,8 @@
     renderGarden();
   });
   $('startPrompt').addEventListener('click', () => { const field = $(inspirations[promptIndex][1]); field.focus(); field.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); });
-  recordInputs.forEach(id => $(id).addEventListener('input', () => { $('saveHint').textContent = '正在写，记得把这一天留住。'; updateWritingState(); }));
+  recordInputs.forEach(id => $(id).addEventListener('input', () => { if (rememberDraft()) $('saveHint').textContent = '草稿已保存在本机，写完后记得留住这一天。'; updateWritingState(); }));
+  $('calendarNoteInput').addEventListener('input', rememberDraft);
   $('saveRecord').addEventListener('click', () => {
     const r = readRecord(), previous = state.dailyRecords[selectedDate], wasPlanted = savedKeys().includes(selectedDate);
     if (!r.happy && !r.unhappy && !r.thoughts) {
@@ -229,3 +245,4 @@
   window.addEventListener('hashchange', () => renderPage(true));
   renderSelectedDay(); renderCalendar(); renderInspiration(); renderGarden(); renderPage();
 })();
+

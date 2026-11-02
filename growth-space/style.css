@@ -57,7 +57,7 @@ html.embedded .page { padding-bottom: 20px; }
 }
 .export-button .icon { width: 15px; height: 15px; }
 .export-button:hover { background: rgba(52, 199, 89, .12); }
-.top-date { display: flex; align-items: center; gap: 5px; color: var(--text-2); font-size: 11px; white-space: nowrap; }
+.top-date { display: flex; align-items: center; gap: 5px; color: var(--text-2); font-size: 12px; white-space: nowrap; }
 .top-date .icon { width: 14px; height: 14px; }
 main { padding-top: 4px; }
 .intro, .journal, .calendar, .archive-transfer, .archive-empty {
@@ -85,9 +85,9 @@ h1 { margin: 0; font-size: 27px; line-height: 1.3; letter-spacing: -.35px; font-
 .garden-top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .garden-top h2 { margin: 0; font-size: 12px; font-weight: 650; }
 .garden-controls { display: flex; align-items: center; gap: 8px; }
-.garden-total { color: var(--text-2); font-size: 11px; }
+.garden-total { color: var(--text-2); font-size: 12px; }
 .garden-total b { color: var(--green-deep); font-weight: 700; }
-.garden-mode { display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--text); font-size: 11px; font-weight: 600; transition: background-color .2s ease, color .2s ease; }
+.garden-mode { display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--text); font-size: 12px; font-weight: 600; transition: background-color .2s ease, color .2s ease; }
 .garden-mode .icon { width: 15px; height: 15px; color: var(--green-deep); }
 .garden-mode:hover { background: rgba(52, 199, 89, .14); }
 .garden-scene { position: relative; height: 112px; transition: background-color .25s ease; }
@@ -117,8 +117,8 @@ h1 { margin: 0; font-size: 27px; line-height: 1.3; letter-spacing: -.35px; font-
 .journal { min-width: 0; padding: 16px; }
 .journal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding-bottom: 12px; }
 .journal-head h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.2px; }
-.writing-status { margin: 3px 0 0; color: var(--text-2); font-size: 11px; }
-.selected-label { flex: none; margin-top: 1px; padding: 4px 9px; border-radius: 999px; background: rgba(52, 199, 89, .14); color: var(--green-deep); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.writing-status { margin: 3px 0 0; color: var(--text-2); font-size: 12px; }
+.selected-label { flex: none; margin-top: 1px; padding: 4px 9px; border-radius: 999px; background: rgba(52, 199, 89, .14); color: var(--green-deep); font-size: 12px; font-weight: 600; white-space: nowrap; }
 .inspiration { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; min-width: 0; padding: 11px 12px; border-radius: 14px; background: rgba(10, 132, 255, .10); }
 .inspiration-copy { min-width: 0; }
 .inspiration-head { display: flex; align-items: center; gap: 6px; color: var(--blue); font-size: 12px; font-weight: 650; }
@@ -127,7 +127,7 @@ h1 { margin: 0; font-size: 27px; line-height: 1.3; letter-spacing: -.35px; font-
 .inspiration-head .icon { width: 15px; height: 15px; }
 .inspiration p { margin: 4px 0 0; color: var(--text); font-size: 13px; line-height: 1.55; }
 .inspiration-actions { display: grid; flex: none; gap: 0; padding-top: 1px; }
-.text-button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 11px; font-weight: 550; white-space: nowrap; }
+.text-button { display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; min-height: 32px; padding: 0; border: 0; background: none; color: var(--text-2); font-size: 12px; font-weight: 550; white-space: nowrap; }
 .text-button .icon { width: 13px; height: 13px; }
 .text-button:hover { color: var(--green-deep); }
 .start-prompt { color: var(--green-deep); }
@@ -147,12 +147,12 @@ h1 { margin: 0; font-size: 27px; line-height: 1.3; letter-spacing: -.35px; font-
 .prompt textarea:focus, .note textarea:focus { border-color: var(--green); outline: none; }
 .prompt textarea:focus-visible, .note textarea:focus-visible { box-shadow: 0 0 0 3px rgba(52, 199, 89, .16); outline: none; }
 .journal-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 14px; }
-.save-status { color: var(--text-2); font-size: 11px; line-height: 1.4; }
+.save-status { color: var(--text-2); font-size: 12px; line-height: 1.4; }
 
 .calendar { min-width: 0; padding: 16px; }
 .calendar-title { padding-bottom: 11px; border-bottom: 1px solid var(--line); }
 .calendar-title h2 { margin: 0; font-size: 17px; font-weight: 700; }
-.calendar-title p { margin: 3px 0 0; color: var(--text-2); font-size: 11px; }
+.calendar-title p { margin: 3px 0 0; color: var(--text-2); font-size: 12px; }
 .calendar-head { padding: 9px 0 2px; }
 .month-nav { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
 .month-nav strong { font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -169,9 +169,9 @@ h1 { margin: 0; font-size: 27px; line-height: 1.3; letter-spacing: -.35px; font-
 .calendar-day.today:not(.selected) { box-shadow: inset 0 0 0 1px var(--green); color: var(--green-deep); font-weight: 650; }
 .calendar-day.has-note:after { position: absolute; bottom: 4px; left: calc(50% - 2px); width: 4px; height: 4px; border-radius: 50%; background: var(--orange); content: ""; }
 .calendar-day.selected.has-note:after { background: currentColor; }
-.calendar-legend { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 7px 0 0; color: var(--text-2); font-size: 11px; }
+.calendar-legend { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin: 7px 0 0; color: var(--text-2); font-size: 12px; }
 .legend-dot { display: inline-block; width: 5px; height: 5px; margin-right: 5px; border-radius: 50%; background: var(--orange); }
-.calendar-legend button { min-height: 36px; padding: 0 5px; border: 0; background: none; color: var(--green-deep); font-size: 11px; font-weight: 600; }
+.calendar-legend button { min-height: 36px; padding: 0 5px; border: 0; background: none; color: var(--green-deep); font-size: 12px; font-weight: 600; }
 .note { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .note-label { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-size: 13px; font-weight: 650; }
 .note-label span { color: var(--text-2); font-size: 10px; font-weight: 400; }
@@ -193,14 +193,14 @@ html.embedded .toast { bottom: 14px; }
 .archive-intro .icon { width: 25px; height: 25px; margin-bottom: 7px; color: var(--green-deep); }
 .archive-intro h1 { font-size: 25px; line-height: 1.3; }
 .archive-intro p { margin: 5px 0 0; color: var(--text-2); font-size: 12px; }
-.archive-count { margin: 0 2px 8px; color: var(--text-2); font-size: 11px; }
+.archive-count { margin: 0 2px 8px; color: var(--text-2); font-size: 12px; }
 .archive-transfer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; margin: 0 0 12px; border-left: 0; }
 .archive-transfer h2 { margin: 0; font-size: 14px; font-weight: 650; }
-.archive-transfer p { margin: 3px 0 0; color: var(--text-2); font-size: 11px; }
+.archive-transfer p { margin: 3px 0 0; color: var(--text-2); font-size: 12px; }
 .archive-transfer .export-button { background: var(--bg); }
 .archive-entry { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 13px; padding: 15px; margin-bottom: 10px; border: 0; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); scroll-margin-top: 16px; }
 .archive-entry h2 { margin: 0; color: var(--green-deep); font-size: 12px; line-height: 1.5; font-weight: 650; }
-.archive-entry h3 { margin: 15px 0 5px; color: var(--text-2); font-size: 11px; font-weight: 650; }
+.archive-entry h3 { margin: 15px 0 5px; color: var(--text-2); font-size: 12px; font-weight: 650; }
 .archive-content h3:first-child { margin-top: 0; }
 .archive-entry p { max-width: 70ch; margin: 0; color: var(--text); font-size: 13px; line-height: 1.65; white-space: pre-wrap; overflow-wrap: anywhere; }
 .archive-entry.highlighted { box-shadow: inset 0 0 0 2px var(--green), var(--shadow); }
@@ -215,7 +215,7 @@ html.embedded .toast { bottom: 14px; }
   .brand { gap: 7px; font-size: 13px; }
   .brand-mark { width: 29px; height: 29px; }
   .top-actions { gap: 5px; }
-  .export-button { gap: 4px; padding: 0 8px; font-size: 11px; }
+  .export-button { gap: 4px; padding: 0 8px; font-size: 12px; }
   .top-date { font-size: 10px; }
   main { padding-top: 2px; }
   .intro { padding: 13px; gap: 4px; }
@@ -225,7 +225,7 @@ html.embedded .toast { bottom: 14px; }
   .journal, .calendar { padding: 13px; }
   .prompt { padding: 9px; }
   .inspiration { gap: 6px; padding: 10px; }
-  .text-button { font-size: 11px; }
+  .text-button { font-size: 12px; }
   .archive-intro { padding: 13px; }
   .archive-entry { grid-template-columns: 1fr; gap: 7px; padding: 13px; }
   .archive-transfer { align-items: flex-start; flex-direction: column; gap: 9px; padding: 13px; }
@@ -258,3 +258,4 @@ body { transition: background-color .2s ease, color .2s ease; }
 .garden-seedling .sunflower-art { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; }
 .bloom .garden-flower:last-child .sunflower-art { animation: blossom .55s cubic-bezier(.2,.8,.3,1) both; transform-origin: center bottom; }
 @media (prefers-reduced-motion: reduce) { .bloom .garden-flower:last-child .sunflower-art { animation: none; } }
+
