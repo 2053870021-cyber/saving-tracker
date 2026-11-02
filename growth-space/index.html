@@ -15,6 +15,7 @@
 <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M12 21V10M12 13C5 13 4 9 4 5c5 0 8 2 8 8ZM12 16c0-5 3-8 8-8 0 5-2 8-8 8Z"/></symbol>
 <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19m0-14-1.5 1.5m-11 11L5 19"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 15.4A8.7 8.7 0 0 1 8.6 3.5 8.8 8.8 0 1 0 20.5 15.4Z"/></symbol>
 <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M6 17h12a3.5 3.5 0 0 0 .1-7 6 6 0 0 0-11.5-1A4 4 0 0 0 6 17ZM8 21h.1m4.9 0h.1"/></symbol>
 <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.3 6.7L21 12l-6.7 2.3L12 21l-2.3-6.7L3 12l6.7-2.3L12 3Z"/></symbol>
 <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16m-11 5h.1m5.9 0h.1"/></symbol>
@@ -35,11 +36,11 @@
 <section class="intro" aria-labelledby="welcomeTitle">
 <div class="intro-copy"><h1 id="welcomeTitle" tabindex="-1">今天，<br>也值得被记住。</h1><p>每天写下快乐、烦恼和一点思考。<br>把注意力放回自己，让日子慢慢开花。</p><div class="hero-actions"><button class="button hero-button" id="beginWriting" type="button"><span id="beginLabel">开始今天的记录</span><svg class="icon" aria-hidden="true"><use href="#i-right"/></svg></button><a class="quiet-link" href="#records">翻翻写过的日子<svg class="icon" aria-hidden="true"><use href="#i-right"/></svg></a></div></div>
 <section class="garden" aria-labelledby="gardenTitle">
-<div class="garden-top"><h2 id="gardenTitle">我的小花园</h2><span class="garden-total">已留下 <b id="gardenCount">0</b> 个日子</span></div>
+<div class="garden-top"><h2 id="gardenTitle">我的小花园</h2><div class="garden-controls"><span class="garden-total">已留下 <b id="gardenCount">0</b> 天</span><button class="garden-mode" id="gardenModeToggle" type="button" aria-pressed="false" aria-controls="gardenScene"><svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg><span>夜晚</span></button></div></div>
 <div class="garden-scene" id="gardenScene">
 <span class="garden-sun" aria-hidden="true"></span>
-<svg class="garden-ground" viewBox="0 0 460 55" preserveAspectRatio="none" aria-hidden="true"><path d="M0 35C75 0 147 24 211 27S358-7 460 26V55H0Z" fill="currentColor"/><path d="M0 44c101-18 176-3 248-1s142-21 212-8v20H0Z" fill="#c9d8b6"/></svg>
-<svg class="garden-seedling" id="gardenSeedling" viewBox="0 0 90 110" aria-hidden="true"><path d="M45 103C46 86 42 68 46 47" fill="none" stroke="#6b8c5a" stroke-width="3" stroke-linecap="round"/><path d="M44 80C20 78 18 63 21 59c16-1 25 7 23 21Z" fill="#a3b98a"/><path d="M45 63C46 41 62 36 68 40c0 17-10 25-23 23Z" fill="#7d9f67"/><path d="M45 48C32 47 29 36 33 33c10 0 15 7 12 15Z" fill="#bdd1a1"/><path d="M28 105c11-6 26-6 36 0" fill="none" stroke="#9bae83" stroke-width="2" stroke-linecap="round"/></svg>
+<svg class="garden-ground" viewBox="0 0 460 55" preserveAspectRatio="none" aria-hidden="true"><path d="M0 35C75 0 147 24 211 27S358-7 460 26V55H0Z" fill="currentColor"/><path d="M0 44c101-18 176-3 248-1s142-21 212-8v20H0Z" fill="var(--garden-ground-light, #c9d8b6)"/></svg>
+<div class="garden-seedling" id="gardenSeedling" aria-hidden="true"></div>
 <div id="gardenFlowers"></div>
 </div>
 <p class="garden-caption" id="gardenCaption">先写一句话，种下属于你的第一朵花。</p>
