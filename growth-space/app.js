@@ -16,6 +16,9 @@
     });
   }
   if (!state.calendarNotes) state.calendarNotes = {};
+  const GARDEN_MODE_KEY = 'xiangqianyidian-garden-mode-v1';
+  let gardenMode = 'day';
+  try { gardenMode = localStorage.getItem(GARDEN_MODE_KEY) === 'night' ? 'night' : 'day'; } catch (e) { /* 使用白天模式 */ }
   const drafts = new Map();
   const recordInputs = ['happyInput', 'unhappyInput', 'thoughtInput'];
   const readRecord = () => ({ happy: $('happyInput').value.trim(), unhappy: $('unhappyInput').value.trim(), thoughts: $('thoughtInput').value.trim() });
@@ -63,29 +66,50 @@
     }
     if (focusDate) grid.querySelector('[data-date="' + focusDate + '"]')?.focus({ preventScroll: true });
   }
-  function flowerSvg(index) {
-    const palette = [['#edc48f', '#ad7144'], ['#dba398', '#9a6259'], ['#b8b4d5', '#746990'], ['#e6d799', '#9b8244']];
-    const [petal, center] = palette[index % palette.length];
-    const stem = index % 2 ? 'M34 118C34 96 27 73 34 41' : 'M34 118C28 96 40 70 34 41';
-    const petals = [0, 60, 120, 180, 240, 300].map(angle => '<path d="M34 40C19 33 23 15 34 18C45 15 49 33 34 40Z" transform="rotate(' + angle + ' 34 40)" fill="' + petal + '"/>').join('');
-    return '<svg viewBox="0 0 68 130" aria-hidden="true"><path d="' + stem + '" stroke="#668565" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M34 91C15 92 12 78 15 76C29 75 35 84 34 91Z" fill="#9daf83"/><path d="M34 75C47 74 55 63 51 60C39 60 32 68 34 75Z" fill="#7f9a74"/>' + petals + '<circle cx="34" cy="40" r="6.5" fill="' + center + '"/><circle cx="32.5" cy="38.5" r="1" fill="#fff" opacity=".5"/></svg>';
+  function plantHead(x, y, type, large) {
+    if (type === 'sun') {
+      const petals = Array.from({ length: 12 }, (_, i) => '<ellipse cx="' + x + '" cy="' + (y - 21) + '" rx="6" ry="12" transform="rotate(' + (i * 30) + ' ' + x + ' ' + y + ')" fill="#f5b42a" stroke="#d8871c" stroke-width="1.4"/>').join('');
+      return petals + '<circle cx="' + x + '" cy="' + y + '" r="' + (large ? 17 : 14) + '" fill="#8a4f25" stroke="#61391e" stroke-width="2"/><ellipse cx="' + (x - 5) + '" cy="' + (y - 2) + '" rx="2.4" ry="3.8" fill="#fff5cc"/><ellipse cx="' + (x + 5) + '" cy="' + (y - 2) + '" rx="2.4" ry="3.8" fill="#fff5cc"/><circle cx="' + (x - 5) + '" cy="' + (y - 1) + '" r="1.1" fill="#402a20"/><circle cx="' + (x + 5) + '" cy="' + (y - 1) + '" r="1.1" fill="#402a20"/><path d="M' + (x - 5) + ' ' + (y + 6) + ' Q' + x + ' ' + (y + 11) + ' ' + (x + 5) + ' ' + (y + 6) + '" fill="none" stroke="#402a20" stroke-width="1.7" stroke-linecap="round"/>';
+    }
+    const cap = large
+      ? '<path d="M' + (x - 29) + ' ' + (y + 3) + ' Q' + (x - 25) + ' ' + (y - 27) + ' ' + x + ' ' + (y - 28) + ' Q' + (x + 26) + ' ' + (y - 26) + ' ' + (x + 30) + ' ' + (y + 3) + ' Q' + x + ' ' + (y + 13) + ' ' + (x - 29) + ' ' + (y + 3) + 'Z' : '<path d="M' + (x - 23) + ' ' + (y + 3) + ' Q' + (x - 18) + ' ' + (y - 21) + ' ' + x + ' ' + (y - 22) + ' Q' + (x + 20) + ' ' + (y - 20) + ' ' + (x + 23) + ' ' + (y + 3) + ' Q' + x + ' ' + (y + 10) + ' ' + (x - 23) + ' ' + (y + 3) + 'Z';
+    return '<path d="M' + (x - 11) + ' ' + (y + 2) + ' Q' + (x - 12) + ' ' + (y + 21) + ' ' + (x - 9) + ' ' + (y + 29) + ' L' + (x + 10) + ' ' + (y + 29) + ' Q' + (x + 13) + ' ' + (y + 16) + ' ' + (x + 11) + ' ' + (y + 2) + 'Z" fill="#e9d2a5" stroke="#9b7950" stroke-width="1.5"/>' + cap + '<path d="M' + (x - 8) + ' ' + (y - 5) + ' q3 -3 6 0 M' + (x + 2) + ' ' + (y - 5) + ' q3 -3 6 0" fill="none" stroke="#352b3d" stroke-width="1.7" stroke-linecap="round"/><circle cx="' + (x - 5) + '" cy="' + (y - 2) + '" r="1.5" fill="#352b3d"/><circle cx="' + (x + 5) + '" cy="' + (y - 2) + '" r="1.5" fill="#352b3d"/><path d="M' + (x - 3) + ' ' + (y + 6) + ' Q' + x + ' ' + (y + 9) + ' ' + (x + 3) + ' ' + (y + 6) + '" fill="none" stroke="#704050" stroke-width="1.5" stroke-linecap="round"/><circle cx="' + (x - 15) + '" cy="' + (y - 1) + '" r="3" fill="#ead6ed"/><circle cx="' + (x + 15) + '" cy="' + (y - 1) + '" r="3" fill="#ead6ed"/>';
+  }
+  function plantSvg(type, upgraded) {
+    const heads = type === 'sun'
+      ? upgraded ? plantHead(43, 39, 'sun', true) + plantHead(78, 39, 'sun', true) : plantHead(60, 42, 'sun', false)
+      : plantHead(60, upgraded ? 39 : 42, 'mushroom', upgraded);
+    const stems = type === 'sun' && upgraded
+      ? '<path d="M60 120V71 M60 83Q47 72 43 58 M60 83Q72 72 78 58" fill="none" stroke="#59824c" stroke-width="5" stroke-linecap="round"/>'
+      : '<path d="M60 120V68" fill="none" stroke="#59824c" stroke-width="5" stroke-linecap="round"/>';
+    const puff = type === 'mushroom' && upgraded ? '<path d="M84 48q12 -6 17 0q-6 2 -9 7q-5 -3 -8 -7Z" fill="#c49ad2" stroke="#79528c" stroke-width="1.5"/>' : '';
+    return '<svg viewBox="0 0 120 130" aria-hidden="true"><path d="M60 104Q35 92 27 99Q37 112 59 111 M61 95Q82 82 93 88Q84 103 61 103" fill="#86a96b" stroke="#59824c" stroke-width="2" stroke-linejoin="round"/>' + stems + heads + puff + '</svg>';
   }
   function renderGarden(bloom = false) {
     const keys = savedKeys();
     $('beginLabel').textContent = hasRecord(today) ? '继续今天的记录' : '开始今天的记录';
     $('gardenCount').textContent = keys.length;
-    $('gardenCaption').textContent = keys.length ? '每一朵花，都是你认真生活过的一天。' : '先写一句话，种下属于你的第一朵花。';
+    $('gardenCaption').textContent = keys.length ? (gardenMode === 'day' ? '白天晒晒太阳，每 5 个记录日长成一株双头向日葵。' : '夜里安静生长，每 5 个记录日长成一株大喷菇。') : (gardenMode === 'day' ? '先留下一天，种下第一株向日葵。' : '先留下一天，夜色里会长出第一株小喷菇。');
     const garden = $('gardenFlowers'); garden.replaceChildren();
     $('gardenSeedling').toggleAttribute('hidden', keys.length > 0);
-    $('gardenMore').textContent = keys.length > 9 ? '最近 9 朵 · 共 ' + keys.length + ' 个日子' : '点一朵花，看看那天的自己';
+    $('gardenSeedling').innerHTML = plantSvg(gardenMode === 'day' ? 'sun' : 'mushroom', false);
+    $('garden').classList.toggle('night-mode', gardenMode === 'night');
+    const modeButton = $('gardenModeToggle');
+    modeButton.setAttribute('aria-pressed', gardenMode === 'night' ? 'true' : 'false');
+    modeButton.setAttribute('aria-label', gardenMode === 'day' ? '切换到夜晚，显示小喷菇' : '切换到白天，显示向日葵');
+    modeButton.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#' + (gardenMode === 'day' ? 'i-moon' : 'i-sun') + '"/></svg><span>' + (gardenMode === 'day' ? '夜晚' : '白天') + '</span>';
+    const groups = [];
+    for (let i = 0; i < keys.length; i += 5) groups.push(keys.slice(i, i + 5));
+    $('gardenMore').textContent = groups.length > 9 ? '最近 9 株 · 共 ' + groups.length + ' 株；每株代表最多 5 天' : '点一株植物，回看最近一天的记录';
     $('gardenMore').hidden = keys.length === 0;
     const positions = [50, 25, 72, 39, 85, 12, 60, 32, 77];
-    keys.slice(0, 9).reverse().forEach((key, index) => {
+    groups.slice(0, 9).reverse().forEach((group, index) => {
+      const key = group[0], upgraded = group.length === 5;
       const b = document.createElement('button'); b.type = 'button'; b.className = 'garden-flower';
-      b.setAttribute('aria-label', prettyDate(key) + '，查看这天的记录'); b.title = prettyDate(key);
+      b.setAttribute('aria-label', (gardenMode === 'day' ? (upgraded ? '双头向日葵' : '向日葵') : (upgraded ? '大喷菇' : '小喷菇')) + '，代表 ' + group.length + ' 天记录，点击查看最近一天'); b.title = '代表 ' + group.length + ' 天 · ' + prettyDate(key);
       b.style.left = positions[index] + '%'; b.style.bottom = (index > 4 ? 18 : 8) + 'px';
-      b.style.width = (index > 4 ? 60 : 78) + 'px';
-      b.innerHTML = flowerSvg(Number(key.replaceAll('-', '')) % 4);
+      b.style.width = (upgraded ? 86 : index > 4 ? 60 : 74) + 'px';
+      b.innerHTML = plantSvg(gardenMode === 'day' ? 'sun' : 'mushroom', upgraded);
       b.addEventListener('click', () => { pendingRecord = key; location.hash = '#records'; });
       garden.append(b);
     });
@@ -113,6 +137,11 @@
     field.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
   });
   $('nextPrompt').addEventListener('click', () => { promptIndex = (promptIndex + 1) % inspirations.length; renderInspiration(); });
+  $('gardenModeToggle').addEventListener('click', () => {
+    gardenMode = gardenMode === 'day' ? 'night' : 'day';
+    try { localStorage.setItem(GARDEN_MODE_KEY, gardenMode); } catch (e) { /* 模式仍可在本次打开中切换 */ }
+    renderGarden();
+  });
   $('startPrompt').addEventListener('click', () => { const field = $(inspirations[promptIndex][1]); field.focus(); field.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' }); });
   recordInputs.forEach(id => $(id).addEventListener('input', () => { $('saveHint').textContent = '正在写，记得把这一天留住。'; updateWritingState(); }));
   $('saveRecord').addEventListener('click', () => {
