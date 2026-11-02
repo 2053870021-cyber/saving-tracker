@@ -94,6 +94,7 @@
     $('gardenSeedling').toggleAttribute('hidden', keys.length > 0);
     $('gardenSeedling').innerHTML = plantSvg(gardenMode === 'day' ? 'sun' : 'mushroom', false);
     $('garden').classList.toggle('night-mode', gardenMode === 'night');
+    document.documentElement.dataset.gardenTheme = gardenMode;
     const modeButton = $('gardenModeToggle');
     modeButton.setAttribute('aria-pressed', gardenMode === 'night' ? 'true' : 'false');
     modeButton.setAttribute('aria-label', gardenMode === 'day' ? '切换到夜晚，显示小喷菇' : '切换到白天，显示向日葵');
