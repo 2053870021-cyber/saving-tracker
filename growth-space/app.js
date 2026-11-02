@@ -66,25 +66,9 @@
     }
     if (focusDate) grid.querySelector('[data-date="' + focusDate + '"]')?.focus({ preventScroll: true });
   }
-  function plantHead(x, y, type, large) {
-    if (type === 'sun') {
-      const petals = Array.from({ length: 12 }, (_, i) => '<ellipse cx="' + x + '" cy="' + (y - 21) + '" rx="6" ry="12" transform="rotate(' + (i * 30) + ' ' + x + ' ' + y + ')" fill="#f5b42a" stroke="#d8871c" stroke-width="1.4"/>').join('');
-      return petals + '<circle cx="' + x + '" cy="' + y + '" r="' + (large ? 17 : 14) + '" fill="#8a4f25" stroke="#61391e" stroke-width="2"/><ellipse cx="' + (x - 5) + '" cy="' + (y - 2) + '" rx="2.4" ry="3.8" fill="#fff5cc"/><ellipse cx="' + (x + 5) + '" cy="' + (y - 2) + '" rx="2.4" ry="3.8" fill="#fff5cc"/><circle cx="' + (x - 5) + '" cy="' + (y - 1) + '" r="1.1" fill="#402a20"/><circle cx="' + (x + 5) + '" cy="' + (y - 1) + '" r="1.1" fill="#402a20"/><path d="M' + (x - 5) + ' ' + (y + 6) + ' Q' + x + ' ' + (y + 11) + ' ' + (x + 5) + ' ' + (y + 6) + '" fill="none" stroke="#402a20" stroke-width="1.7" stroke-linecap="round"/>';
-    }
-    const cap = large
-      ? '<path d="M' + (x - 29) + ' ' + (y + 3) + ' Q' + (x - 25) + ' ' + (y - 27) + ' ' + x + ' ' + (y - 28) + ' Q' + (x + 26) + ' ' + (y - 26) + ' ' + (x + 30) + ' ' + (y + 3) + ' Q' + x + ' ' + (y + 13) + ' ' + (x - 29) + ' ' + (y + 3) + 'Z' : '<path d="M' + (x - 23) + ' ' + (y + 3) + ' Q' + (x - 18) + ' ' + (y - 21) + ' ' + x + ' ' + (y - 22) + ' Q' + (x + 20) + ' ' + (y - 20) + ' ' + (x + 23) + ' ' + (y + 3) + ' Q' + x + ' ' + (y + 10) + ' ' + (x - 23) + ' ' + (y + 3) + 'Z';
-    return '<path d="M' + (x - 11) + ' ' + (y + 2) + ' Q' + (x - 12) + ' ' + (y + 21) + ' ' + (x - 9) + ' ' + (y + 29) + ' L' + (x + 10) + ' ' + (y + 29) + ' Q' + (x + 13) + ' ' + (y + 16) + ' ' + (x + 11) + ' ' + (y + 2) + 'Z" fill="#e9d2a5" stroke="#9b7950" stroke-width="1.5"/>' + cap + '<path d="M' + (x - 8) + ' ' + (y - 5) + ' q3 -3 6 0 M' + (x + 2) + ' ' + (y - 5) + ' q3 -3 6 0" fill="none" stroke="#352b3d" stroke-width="1.7" stroke-linecap="round"/><circle cx="' + (x - 5) + '" cy="' + (y - 2) + '" r="1.5" fill="#352b3d"/><circle cx="' + (x + 5) + '" cy="' + (y - 2) + '" r="1.5" fill="#352b3d"/><path d="M' + (x - 3) + ' ' + (y + 6) + ' Q' + x + ' ' + (y + 9) + ' ' + (x + 3) + ' ' + (y + 6) + '" fill="none" stroke="#704050" stroke-width="1.5" stroke-linecap="round"/><circle cx="' + (x - 15) + '" cy="' + (y - 1) + '" r="3" fill="#ead6ed"/><circle cx="' + (x + 15) + '" cy="' + (y - 1) + '" r="3" fill="#ead6ed"/>';
-  }
   function plantSvg(type, upgraded) {
-    if (type === 'mushroom') return '<img class="mushroom-art" src="./assets/' + (upgraded ? 'fume-shroom.png' : 'puff-shroom.png') + '" alt="" aria-hidden="true" width="120" height="130">';
-    const heads = type === 'sun'
-      ? upgraded ? plantHead(43, 39, 'sun', true) + plantHead(78, 39, 'sun', true) : plantHead(60, 42, 'sun', false)
-      : plantHead(60, upgraded ? 39 : 42, 'mushroom', upgraded);
-    const stems = type === 'sun' && upgraded
-      ? '<path d="M60 120V71 M60 83Q47 72 43 58 M60 83Q72 72 78 58" fill="none" stroke="#59824c" stroke-width="5" stroke-linecap="round"/>'
-      : '<path d="M60 120V68" fill="none" stroke="#59824c" stroke-width="5" stroke-linecap="round"/>';
-    const puff = type === 'mushroom' && upgraded ? '<path d="M84 48q12 -6 17 0q-6 2 -9 7q-5 -3 -8 -7Z" fill="#c49ad2" stroke="#79528c" stroke-width="1.5"/>' : '';
-    return '<svg viewBox="0 0 120 130" aria-hidden="true"><path d="M60 104Q35 92 27 99Q37 112 59 111 M61 95Q82 82 93 88Q84 103 61 103" fill="#86a96b" stroke="#59824c" stroke-width="2" stroke-linejoin="round"/>' + stems + heads + puff + '</svg>';
+    const file = type === 'mushroom' ? (upgraded ? 'fume-shroom' : 'puff-shroom') : (upgraded ? 'twin-sunflower' : 'sunflower');
+    return '<img class="plant-art ' + (type === 'mushroom' ? 'mushroom-art' : 'sunflower-art') + '" src="./assets/' + file + '.png" alt="" aria-hidden="true">';
   }
   function renderGarden(bloom = false) {
     const keys = savedKeys();
@@ -94,6 +78,7 @@
     const garden = $('gardenFlowers'); garden.replaceChildren();
     $('gardenSeedling').toggleAttribute('hidden', keys.length > 0);
     $('gardenSeedling').innerHTML = plantSvg(gardenMode === 'day' ? 'sun' : 'mushroom', false);
+    $('gardenSeedling').style.width = gardenMode === 'night' ? '48px' : '78px';
     $('garden').classList.toggle('night-mode', gardenMode === 'night');
     document.documentElement.dataset.gardenTheme = gardenMode;
     const modeButton = $('gardenModeToggle');
@@ -111,6 +96,7 @@
       b.setAttribute('aria-label', (gardenMode === 'day' ? (upgraded ? '双头向日葵' : '向日葵') : (upgraded ? '大喷菇' : '小喷菇')) + '，代表 ' + group.length + ' 天记录，点击查看最近一天'); b.title = '代表 ' + group.length + ' 天 · ' + prettyDate(key);
       b.style.left = positions[index] + '%'; b.style.bottom = (index > 4 ? 18 : 8) + 'px';
       b.style.width = (upgraded ? 86 : index > 4 ? 60 : 74) + 'px';
+      if (gardenMode === 'night' && !upgraded) b.style.width = '48px';
       b.innerHTML = plantSvg(gardenMode === 'day' ? 'sun' : 'mushroom', upgraded);
       b.addEventListener('click', () => { pendingRecord = key; location.hash = '#records'; });
       garden.append(b);
@@ -243,4 +229,3 @@
   window.addEventListener('hashchange', () => renderPage(true));
   renderSelectedDay(); renderCalendar(); renderInspiration(); renderGarden(); renderPage();
 })();
-

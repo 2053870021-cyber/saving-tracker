@@ -1,5 +1,5 @@
 /* 省钱记 Service Worker — 本地缓存优先，首次联网加载后可离线使用 */
-const CACHE = 'savetracker-v1.1.5';
+const CACHE = 'savetracker-v1.1.6';
 const GROWTH_SPACE_PATH = new URL('./growth-space/', self.registration.scope).pathname;
 const ASSETS = [
   './',
@@ -16,7 +16,9 @@ const ASSETS = [
   './growth-space/style.css',
   './growth-space/app.js',
   './growth-space/assets/puff-shroom.png',
-  './growth-space/assets/fume-shroom.png'
+  './growth-space/assets/fume-shroom.png',
+  './growth-space/assets/sunflower.png',
+  './growth-space/assets/twin-sunflower.png'
 ];
 
 self.addEventListener('install', event => {
@@ -59,4 +61,3 @@ self.addEventListener('fetch', event => {
     })
   );
 });
-
