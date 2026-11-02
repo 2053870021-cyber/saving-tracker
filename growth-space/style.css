@@ -236,4 +236,13 @@ html.embedded .toast { bottom: 14px; }
   button, .garden, .garden-scene, .garden-mode, .garden-scene::after, .garden-flower, .toast, .prompt textarea { transition: none; }
 }
 
+/* Explicit garden theme applies to the whole journal, independent of system appearance. */
+:root[data-garden-theme="day"] { color-scheme: light; --bg: #f2f2f7; --card: #fff; --text: #1c1c1e; --text-2: #626269; --text-3: #73737b; --line: rgba(60,60,67,.15); --green: #34c759; --green-deep: #248a3d; --blue: #0068d6; --shadow: 0 1px 3px rgba(0,0,0,.06), 0 6px 18px rgba(0,0,0,.05); }
+:root[data-garden-theme="night"] { color-scheme: dark; --bg: #141820; --card: #202630; --text: #f2f2f7; --text-2: #c0c4ce; --text-3: #a6acb8; --line: rgba(180,190,210,.2); --green: #a7d39a; --green-deep: #a7d39a; --blue: #80baff; --shadow: none; }
+:root[data-garden-theme="day"] .inspiration-head { color: #0068d6; }
+:root[data-garden-theme="night"] .inspiration-head { color: #80baff; }
+body { transition: background-color .2s ease, color .2s ease; }
+.garden-flower svg > path:not([fill]) { fill: #a77ec2; stroke: #654780; stroke-width: 2; }
+.garden-seedling svg > path:not([fill]) { fill: #a77ec2; stroke: #654780; stroke-width: 2; }
+@media (prefers-reduced-motion: reduce) { body { transition: none; } }
 
