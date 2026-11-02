@@ -107,7 +107,7 @@
     const positions = [50, 25, 72, 39, 85, 12, 60, 32, 77];
     groups.slice(0, 9).reverse().forEach((group, index) => {
       const key = group[0], upgraded = group.length === 5;
-      const b = document.createElement('button'); b.type = 'button'; b.className = 'garden-flower';
+      const b = document.createElement('button'); b.type = 'button'; b.className = gardenMode === 'night' ? 'garden-flower ground-mushroom' : 'garden-flower';
       b.setAttribute('aria-label', (gardenMode === 'day' ? (upgraded ? '双头向日葵' : '向日葵') : (upgraded ? '大喷菇' : '小喷菇')) + '，代表 ' + group.length + ' 天记录，点击查看最近一天'); b.title = '代表 ' + group.length + ' 天 · ' + prettyDate(key);
       b.style.left = positions[index] + '%'; b.style.bottom = (index > 4 ? 18 : 8) + 'px';
       b.style.width = (upgraded ? 86 : index > 4 ? 60 : 74) + 'px';
@@ -243,3 +243,4 @@
   window.addEventListener('hashchange', () => renderPage(true));
   renderSelectedDay(); renderCalendar(); renderInspiration(); renderGarden(); renderPage();
 })();
+
